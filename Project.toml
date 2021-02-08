@@ -1,0 +1,13 @@
+name = "Bennu"
+uuid = "a1f7094c-8d14-434f-a772-7144e1a1c6c0"
+authors = ["Lucas C Wilcox <lucas@swirlee.com> and contributors"]
+version = "0.0.0"
+
+[compat]
+julia = "^1.5"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
