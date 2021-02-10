@@ -1,6 +1,7 @@
 using Bennu
 using Test
 
-@testset "Bennu.jl" begin
-    # Write your tests here.
-end
+using FastGaussQuadrature: FastGaussQuadrature
+
+include("operators.jl")
+include("quadratures.jl")

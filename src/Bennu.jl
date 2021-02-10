@@ -1,5 +1,9 @@
 module Bennu
 
-# Write your package code here.
+export spectralderivative, spectralinterpolation, legendregauss,
+       legendregausslobatto
+
+include("operators.jl")
+include("quadratures.jl")
 
 end
