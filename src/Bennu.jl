@@ -1,9 +1,10 @@
 module Bennu
 
 export spectralderivative, spectralinterpolation, legendregauss,
-       legendregausslobatto
+       legendregausslobatto, partition, hilbertcode
 
 include("operators.jl")
+include("partitions.jl")
 include("quadratures.jl")
 
 end
