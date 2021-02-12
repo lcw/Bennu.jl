@@ -1,0 +1,6 @@
+[deps]
+Bennu = "a1f7094c-8d14-434f-a772-7144e1a1c6c0"
+Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+UnicodePlots = "b8865327-cd53-5732-bb35-84acbb429228"
