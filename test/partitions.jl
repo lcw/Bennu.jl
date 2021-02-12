@@ -39,3 +39,20 @@ end
 
     @test hilbertcode(UInt64.([14,3,4])) == UInt64.([0x0,0x0,0xe25])
 end
+
+@testset "quantize" begin
+    @test quantize(0.0) == zero(UInt64)
+    @test quantize(0.5) == typemax(UInt64)÷2
+    @test quantize(1.0) == typemax(UInt64)
+    @test quantize(0.0f0) == zero(UInt64)
+    @test quantize(0.5f0) == typemax(UInt64)÷2
+    @test quantize(1.0f0) == typemax(UInt64)
+    for T in (UInt8, UInt16, UInt32, UInt64, UInt128)
+        @test quantize(T, 0.0) == zero(T)
+        @test quantize(T, 0.5) == typemax(T)÷2
+        @test quantize(T, 1.0) == typemax(T)
+        @test quantize(T, 0.0f0) == zero(T)
+        @test quantize(T, 0.5f0) == typemax(T)÷2
+        @test quantize(T, 1.0f0) == typemax(T)
+    end
+end

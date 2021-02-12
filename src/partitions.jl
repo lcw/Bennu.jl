@@ -159,3 +159,31 @@ function hilbertcode(Y::AbstractArray{T}; bits=8sizeof(T)) where T
 end
 
 
+"""
+    quantize([T=UInt64], x)
+
+Quantize a number `x`, between `zero(x)` and `one(x)`, to an integer of type `T`
+between `zero(T)` and `typemax(T)`.  If `x` is an array or tuple each element is
+quantized.
+
+# Examples
+```jldoctest
+julia> quantize(0.0)
+0x0000000000000000
+
+julia> quantize(UInt32, 0.5f0)
+0x7fffffff
+
+julia> quantize((1.0, 0.5))
+(0xffffffffffffffff, 0x7fffffffffffffff)
+
+```
+
+"""
+function quantize end
+
+quantize(x) = quantize(UInt64, x)
+quantize(::Type{T}, x::AbstractArray) where T = quantize.(T, x)
+quantize(::Type{T}, x::Tuple) where T = quantize.(T, x)
+quantize(::Type{T}, x::Number) where {T <: Integer} =
+    convert(T, floor(typemax(T) * BigFloat(x; precision = 16sizeof(T))))
