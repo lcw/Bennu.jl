@@ -3,7 +3,11 @@ using Test
 using Pkg: Pkg
 
 using FastGaussQuadrature: FastGaussQuadrature
+using StaticArrays
+using StructArrays
+using Tullio
 
+include("arrays.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")

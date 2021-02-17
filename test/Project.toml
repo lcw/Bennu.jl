@@ -1,4 +1,7 @@
 [deps]
 FastGaussQuadrature = "442a2c76-b920-505d-bb47-c5924d526838"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
