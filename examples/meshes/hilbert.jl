@@ -1,15 +1,15 @@
 using Bennu
-using Meshes
+using Meshes: Meshes
 using Plots
 unicodeplots()
 
-mesh = CartesianGrid((4, 4), (10., 10.), (0.1, 0.1))
+mesh = Meshes.CartesianGrid((4, 4), (10., 10.), (0.1, 0.1))
 
-u = coordinates(minimum(mesh))
-v = coordinates(maximum(mesh))
+u = Meshes.coordinates(minimum(mesh))
+v = Meshes.coordinates(maximum(mesh))
 integercoordinates(c) = quantize.((c .- u) ./ (v .- u))
 
-centroids = coordinates.(Meshes.centroid.(elements(mesh)))
+centroids = Meshes.coordinates.(Meshes.centroid.(Meshes.elements(mesh)))
 centroids = centroids[sortperm(hilbertcode.(integercoordinates.(centroids)))]
 
 p = plot(mesh)
