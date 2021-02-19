@@ -14,7 +14,7 @@ using Tullio
 using WriteVTK
 
 export spectralderivative, spectralinterpolation, legendregauss,
-       legendregausslobatto, partition, hilbertcode, quantize
+       legendregausslobatto, partition, hilbertcode, quantize, components
 
 include("arrays.jl")
 include("operators.jl")

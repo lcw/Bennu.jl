@@ -7,4 +7,5 @@
     A = StructArray{SVector{4,Float64}}(data = StructArray(tup))
     @test Tullio.storage_type(A) <: Array
     @test Tullio.storage_type(SizedArray{Tuple{3,1,2}}(A)) <: Array
+    @test components(A) == tup
 end
