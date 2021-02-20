@@ -9,7 +9,7 @@ u = coordinates(minimum(mesh))
 v = coordinates(maximum(mesh))
 integercoordinates(c) = quantize.((c .- u) ./ (v .- u))
 
-centroids = coordinates.(Meshes.center.(elements(mesh)))
+centroids = coordinates.(Meshes.centroid.(elements(mesh)))
 centroids = centroids[sortperm(hilbertcode.(integercoordinates.(centroids)))]
 
 p = plot(mesh)
