@@ -2,10 +2,17 @@ using Bennu
 using Test
 using Pkg: Pkg
 
+using Adapt
+using CUDA
+using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
+using LinearAlgebra
 using StaticArrays
 using StructArrays
 using Tullio
+using WriteVTK
+
+CUDA.allowscalar(false)
 
 include("arrays.jl")
 include("operators.jl")
