@@ -4,10 +4,27 @@ authors = ["Lucas C Wilcox <lucas@swirlee.com> and contributors"]
 version = "0.0.0"
 
 [deps]
+Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
+KernelAbstractions = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+LazyArrays = "5078a376-72f3-5289-bfd5-ec5146d43c02"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 StructArrays = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
+WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
+Adapt = "3"
+CUDA = "2"
+FillArrays = "0.11"
+KernelAbstractions = "0.5"
+LazyArrays = "0.20"
+LoopVectorization = "0.11"
+StaticArrays = "0.12, 1"
 StructArrays = "0.5"
 Tullio = "0.2"
+WriteVTK = "1.9"
 julia = "^1.5"
