@@ -12,13 +12,15 @@ using StaticArrays: tuple_prod, tuple_length, size_to_tuple
 using Tullio
 using WriteVTK
 
-export LobattoCell
+export LobattoCell, NodalGrid
 
 export spectralderivative, spectralinterpolation, legendregauss,
        legendregausslobatto, partition, hilbertcode, quantize, floattype,
-       arraytype, points, mass, derivatives, degrees
+       arraytype, points, mass, derivatives, degrees,
+       celltype, referencecell, vertices, connectivity, points
 
 include("cells.jl")
+include("grids.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
