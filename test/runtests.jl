@@ -8,13 +8,11 @@ using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
 using LinearAlgebra
 using StaticArrays
-using StructArrays
 using Tullio
 using WriteVTK
 
 CUDA.allowscalar(false)
 
-include("arrays.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
