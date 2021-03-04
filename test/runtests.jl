@@ -6,13 +6,17 @@ using Adapt
 using CUDA
 using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
+using FillArrays
+using LazyArrays
 using LinearAlgebra
+using Random
 using StaticArrays
 using Tullio
 using WriteVTK
 
 CUDA.allowscalar(false)
 
+include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")

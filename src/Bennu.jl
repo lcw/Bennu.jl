@@ -15,6 +15,7 @@ using WriteVTK
 export spectralderivative, spectralinterpolation, legendregauss,
        legendregausslobatto, partition, hilbertcode, quantize
 
+include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
