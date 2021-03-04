@@ -12,9 +12,13 @@ using StaticArrays: tuple_prod, tuple_length, size_to_tuple
 using Tullio
 using WriteVTK
 
-export spectralderivative, spectralinterpolation, legendregauss,
-       legendregausslobatto, partition, hilbertcode, quantize
+export LobattoCell
 
+export spectralderivative, spectralinterpolation, legendregauss,
+       legendregausslobatto, partition, hilbertcode, quantize, floattype,
+       arraytype, points, mass, derivatives, degrees
+
+include("cells.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")

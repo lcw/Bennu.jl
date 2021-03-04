@@ -16,6 +16,7 @@ using WriteVTK
 
 CUDA.allowscalar(false)
 
+include("cells.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
