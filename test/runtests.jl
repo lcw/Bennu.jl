@@ -17,6 +17,7 @@ using WriteVTK
 CUDA.allowscalar(false)
 
 include("cells.jl")
+include("gridgenerators.jl")
 include("grids.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
