@@ -76,7 +76,8 @@ function LobattoCell{T, A}(dims...) where {T, A}
                                                toequallyspaced)
 end
 
-LobattoCell(dims...) = LobattoCell{Float64, Array}(dims...)
+LobattoCell{T}(dims...) where {T} = LobattoCell{T, Array}(dims...)
+LobattoCell(dims...) = LobattoCell{Float64}(dims...)
 
 const LobattoLine{T, A} = LobattoCell{T, A, Tuple{B}} where {B}
 const LobattoQuad{T, A} = LobattoCell{T, A, Tuple{B, C}} where {B, C}

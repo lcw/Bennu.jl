@@ -49,4 +49,8 @@
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T)), 5)
     end
+
+    cell = LobattoCell{BigFloat}(3)
+    @test floattype(cell) == BigFloat
+    @test arraytype(cell) <: Array
 end
