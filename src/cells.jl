@@ -153,8 +153,12 @@ function connectivity_vtk(cell::LobattoHex)
 end
 
 function pointsfromvertices(referencecell::LobattoLine, vertices, connectivity)
+    T = floattype(referencecell)
     r = points_1d(referencecell)
-    p = similar(vertices, (size(referencecell)..., length(connectivity)))
+    p = similar(vertices, SVector{1, T},
+                (size(referencecell)..., length(connectivity)))
+    connectivity = vec(connectivity)
+    vertices = vec(vertices)
 
     @tullio p[i, e] =
         @inbounds(begin
@@ -169,9 +173,12 @@ function pointsfromvertices(referencecell::LobattoLine, vertices, connectivity)
 end
 
 function pointsfromvertices(referencecell::LobattoQuad, vertices, connectivity)
-
+    T = floattype(referencecell)
     r = vec.(points_1d(referencecell))
-    p = similar(vertices, (size(referencecell)..., length(connectivity)))
+    p = similar(vertices, SVector{2, T},
+                (size(referencecell)..., length(connectivity)))
+    connectivity = vec(connectivity)
+    vertices = vec(vertices)
 
     @tullio p[i, j, e] =
         @inbounds(begin
@@ -188,8 +195,12 @@ function pointsfromvertices(referencecell::LobattoQuad, vertices, connectivity)
 end
 
 function pointsfromvertices(referencecell::LobattoHex, vertices, connectivity)
+    T = floattype(referencecell)
     r = vec.(points_1d(referencecell))
-    p = similar(vertices, (size(referencecell)..., length(connectivity)))
+    p = similar(vertices, SVector{3, T},
+                (size(referencecell)..., length(connectivity)))
+    connectivity = vec(connectivity)
+    vertices = vec(vertices)
 
     @tullio p[i, j, k, e] =
         @inbounds(begin
