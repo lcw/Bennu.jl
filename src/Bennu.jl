@@ -12,11 +12,12 @@ using StaticArrays: tuple_prod, tuple_length, size_to_tuple
 using Tullio
 using WriteVTK
 
-export LobattoCell, NodalGrid
+export LobattoCell, NodalGrid, CartesianOrdering, HilbertOrdering
 
 export spectralderivative, spectralinterpolation, legendregauss,
-       legendregausslobatto, partition, hilbertcode, quantize, floattype,
-       arraytype, points, mass, derivatives, degrees,
+       legendregausslobatto, partition, quantize,
+       hilbertcode, hilbertindices, hilbertperm,
+       floattype, arraytype, points, mass, derivatives, degrees,
        celltype, referencecell, vertices, connectivity, points
 
 include("cells.jl")

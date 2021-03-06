@@ -38,6 +38,11 @@ end
     @test hilbertcode([3,0], bits=2) == [3, 3]
 
     @test hilbertcode(UInt64.([14,3,4])) == UInt64.([0x0,0x0,0xe25])
+
+    @test hilbertindices((2, 2)) == [1 4; 2 3]
+    @test hilbertindices((4, 4)) == [1 4 5 6; 2 3 8 7; 15 14 9 10; 16 13 12 11]
+    @test invperm(vec(hilbertindices((2, 2)))) == hilbertperm((2, 2))
+    @test invperm(vec(hilbertindices((4, 4)))) == hilbertperm((4, 4))
 end
 
 @testset "quantize" begin
