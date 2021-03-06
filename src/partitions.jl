@@ -158,6 +158,15 @@ function hilbertcode(Y::AbstractArray{T}; bits=8sizeof(T)) where T
   return H
 end
 
+hilbertperm(indices) = hilbertperm(CartesianIndices(indices))
+function hilbertperm(indices::CartesianIndices)
+    return sortperm(vec(hilbertcode.(map(v->v.-1, SVector.(Tuple.(indices))))))
+end
+
+function hilbertindices(indices)
+    CIs = CartesianIndices(indices)
+    return reshape(invperm(hilbertperm(CIs)), size(CIs))
+end
 
 """
     quantize([T=UInt64], x)
