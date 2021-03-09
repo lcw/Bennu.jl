@@ -152,7 +152,7 @@ function connectivity_vtk(cell::LobattoHex)
            ]
 end
 
-function pointsfromvertices(referencecell::LobattoLine, vertices, connectivity)
+function materializepoints(referencecell::LobattoLine, vertices, connectivity)
     T = floattype(referencecell)
     r = points_1d(referencecell)
     p = similar(vertices, SVector{1, T},
@@ -172,7 +172,7 @@ function pointsfromvertices(referencecell::LobattoLine, vertices, connectivity)
     return reshape(p, (length(referencecell), length(connectivity)))
 end
 
-function pointsfromvertices(referencecell::LobattoQuad, vertices, connectivity)
+function materializepoints(referencecell::LobattoQuad, vertices, connectivity)
     T = floattype(referencecell)
     r = vec.(points_1d(referencecell))
     p = similar(vertices, SVector{2, T},
@@ -194,7 +194,7 @@ function pointsfromvertices(referencecell::LobattoQuad, vertices, connectivity)
     return reshape(p, (length(referencecell), length(connectivity)))
 end
 
-function pointsfromvertices(referencecell::LobattoHex, vertices, connectivity)
+function materializepoints(referencecell::LobattoHex, vertices, connectivity)
     T = floattype(referencecell)
     r = vec.(points_1d(referencecell))
     p = similar(vertices, SVector{3, T},
