@@ -36,7 +36,7 @@ function NodalGrid(referencecell, vertices, connectivity)
     V = typeof(vertices)
     Y = typeof(connectivity)
 
-    points = pointsfromvertices(referencecell, vertices, connectivity)
+    points = materializepoints(referencecell, vertices, connectivity)
     P = typeof(points)
 
     return NodalGrid{C, Tuple{N...}, V, Y, P}(referencecell, vertices,
