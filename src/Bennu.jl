@@ -27,5 +27,6 @@ include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
+include("tuples.jl")
 
 end
