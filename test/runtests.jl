@@ -3,6 +3,7 @@ using Test
 using Pkg: Pkg
 
 using Adapt
+using Combinatorics
 using CUDA
 using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
@@ -23,6 +24,7 @@ include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
+include("tuples.jl")
 
 @testset "examples" begin
     julia = Base.julia_cmd()
