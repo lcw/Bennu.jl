@@ -33,6 +33,9 @@ include("tuples.jl")
     for example_dir in readdir(joinpath(base_dir, "examples"), join=true)
         @testset "$example_dir" begin
             mktempdir() do tmp_dir
+                # Change to temporary directory so that any files created by the
+                # example get cleaned up after execution.
+                cd(tmp_dir)
                 example_project = Pkg.Types.projectfile_path(example_dir)
                 tmp_project = Pkg.Types.projectfile_path(tmp_dir)
                 cp(example_project, tmp_project)
