@@ -27,13 +27,14 @@ function lobattooperators_1d(::Type{T}, ::Type{A}, M) where {T, A}
             toequallyspaced=toequallyspaced)
 end
 
-struct LobattoCell{T, A, S, N, O, P, D, M, E} <: AbstractCell{T, A, S, N}
+struct LobattoCell{T, A, S, N, O, P, D, M, E, C} <: AbstractCell{T, A, S, N}
     points_1d::O
     weights_1d::O
     points::P
     derivatives::D
     mass::M
     toequallyspaced::E
+    connectivity::C
 end
 
 function LobattoCell{T, A}(dims...) where {T, A}
@@ -69,11 +70,11 @@ function LobattoCell{T, A}(dims...) where {T, A}
 
     toequallyspaced = Kron(reverse(ntuple(i->o[i].toequallyspaced, N))...)
 
-    LobattoCell{T, A, Tuple{dims...}, N,
-                typeof.((points_1d, points, derivatives, mass,
-                         toequallyspaced))...}(points_1d, weights_1d, points,
-                                               derivatives, mass,
-                                               toequallyspaced)
+    connectivity = adapt(A, materializeconnectivity(LobattoCell, dims...))
+
+    args = (points_1d, weights_1d, points, derivatives, mass, toequallyspaced,
+            connectivity)
+    LobattoCell{T, A, Tuple{dims...}, N, typeof.(args[2:end])...}(args...)
 end
 
 function Adapt.adapt_structure(to,
@@ -98,6 +99,7 @@ points(cell::LobattoCell) = cell.points
 derivatives(cell::LobattoCell) = cell.derivatives
 mass(cell::LobattoCell) = cell.mass
 toequallyspaced(cell::LobattoCell) = cell.toequallyspaced
+connectivity(cell::LobattoCell) = cell.connectivity
 degrees(cell::LobattoCell) = size(cell) .- 1
 
 number_of_faces(cell::LobattoCell) = number_of_faces(typeof(cell))
@@ -260,4 +262,109 @@ function materializefaces(::Type{<:LobattoHex})
                2 4 6 8 3 4 7 8 5 6 7 8], # edges
             SA[1 2 3 4 5 6 7 8] # corners
            )
+end
+
+function connectivityoffsets(cell::LobattoCell, ::Val{N}) where {N}
+    connectivityoffsets(typeof(cell), Val(N))
+end
+connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoLine} = (0,)
+connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoLine} = (0, 1)
+
+connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoQuad} = (0,)
+function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoQuad}
+    L, M = size(C)
+    return (0, M, 2M, 2M+L)
+end
+connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoQuad} = (0, 1, 2, 3)
+
+connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoHex} = (0,)
+function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoHex}
+    L, M, N = size(C)
+    return cumsum((0, M*N, M*N, L*N, L*N, L*M))
+end
+function connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoHex}
+    L, M, N = size(C)
+    return cumsum((0, N, N, N, N, M, M, M, M, L, L, L))
+end
+function connectivityoffsets(::Type{C}, ::Val{4}) where {C<:LobattoHex}
+    return (0, 1, 2, 3, 4, 5, 6, 7, 8)
+end
+
+function materializeconnectivity(::Type{<:LobattoCell}, L::Integer)
+    indices = collect(LinearIndices((L,)))
+
+    conn = (
+            (indices,), # edge
+            ( # corners
+             indices[1],
+             indices[end]
+            )
+           )
+
+    return conn
+end
+
+function materializeconnectivity(::Type{<:LobattoCell}, L::Integer, M::Integer)
+    indices = collect(LinearIndices((L, M)))
+
+    conn = (
+            (indices,), # face
+            ( # edges
+             (indices[1,     1:end]),
+             (indices[end,   1:end]),
+             (indices[1:end,     1]),
+             (indices[1:end,   end])
+            ),
+            ( # corners
+             (indices[  1,   1]),
+             (indices[end,   1]),
+             (indices[  1, end]),
+             (indices[end, end])
+            )
+           )
+
+    return conn
+end
+
+function materializeconnectivity(::Type{<:LobattoCell}, L::Integer, M::Integer,
+                                 N::Integer)
+    indices = collect(LinearIndices((L, M, N)))
+
+    conn = (
+            (indices,), # volume
+            ( # faces
+             (indices[    1, 1:end, 1:end]),
+             (indices[  end, 1:end, 1:end]),
+             (indices[1:end,     1, 1:end]),
+             (indices[1:end,   end, 1:end]),
+             (indices[1:end, 1:end,     1]),
+             (indices[1:end, 1:end,   end])
+            ),
+            ( # edges
+             (indices[    1,     1, 1:end]),
+             (indices[  end,     1, 1:end]),
+             (indices[    1,   end, 1:end]),
+             (indices[  end,   end, 1:end]),
+             (indices[    1, 1:end,     1]),
+             (indices[  end, 1:end,     1]),
+             (indices[    1, 1:end,   end]),
+             (indices[  end, 1:end,   end]),
+             (indices[1:end,     1,     1]),
+             (indices[1:end,   end,     1]),
+             (indices[1:end,     1,   end]),
+             (indices[1:end,   end,   end])
+            ),
+            ( # corners
+             (indices[  1,   1,   1]),
+             (indices[end,   1,   1]),
+             (indices[  1, end,   1]),
+             (indices[end, end,   1]),
+             (indices[  1,   1, end]),
+             (indices[end,   1, end]),
+             (indices[  1, end, end]),
+             (indices[end, end, end])
+            )
+           )
+
+    return conn
 end
