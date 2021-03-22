@@ -21,6 +21,7 @@ export spectralderivative, spectralinterpolation, legendregauss,
        floattype, arraytype, points, mass, derivatives, degrees,
        celltype, referencecell, vertices, connectivity, points, brickgrid
 
+include("permutations.jl")
 include("cells.jl")
 include("gridgenerators.jl")
 include("grids.jl")
