@@ -18,10 +18,10 @@ function brickgrid(referencecell::LobattoCell, coordinates::Tuple;
 
     A = arraytype(referencecell)
     coordinates = adapt.(A, collect.(coordinates))
-    coordinates = ntuple(i->reshape(coordinates[i],
-                                    ntuple(j->ifelse(i==j,
-                                                     length(coordinates[i]), 1),
-                                                     M)), M)
+    coordinates = ntuple(M) do i
+        coorddims = ntuple(j->ifelse(i==j, length(coordinates[i]), 1), M)
+        return reshape(coordinates[i], coorddims)
+    end
     vertices = SVector.(coordinates...)
 
     linear = adapt(A, collect(LinearIndices(dims.+1)))
