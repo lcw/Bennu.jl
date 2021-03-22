@@ -32,6 +32,7 @@ include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
+include("sparsearrays.jl")
 include("tuples.jl")
 
 end
