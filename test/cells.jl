@@ -24,6 +24,8 @@
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T), zero(T)), 9)
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T), one(T)), 9)
 
+        @test adapt(Array, cell) isa LobattoCell{T, Array}
+
         s = (3, 4, 2)
         cell = LobattoCell{T, A}(s...)
         @test floattype(cell) == T

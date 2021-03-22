@@ -76,6 +76,15 @@ function LobattoCell{T, A}(dims...) where {T, A}
                                                toequallyspaced)
 end
 
+function Adapt.adapt_structure(to,
+                               cell::LobattoCell{T, A, S, N}) where {T, A, S, N}
+    names = fieldnames(LobattoCell)
+    args = ntuple(j->adapt(to, getfield(cell, names[j])), length(names))
+    B = arraytype(to)
+
+    LobattoCell{T, B, S, N, typeof.(args[2:end])...}(args...)
+end
+
 LobattoCell{T}(dims...) where {T} = LobattoCell{T, Array}(dims...)
 LobattoCell(dims...) = LobattoCell{Float64}(dims...)
 
