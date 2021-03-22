@@ -8,6 +8,7 @@ using CUDA
 using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
 using FillArrays
+using KernelAbstractions
 using LazyArrays
 using LinearAlgebra
 using Random
@@ -21,6 +22,7 @@ include("arrays.jl")
 include("cells.jl")
 include("gridgenerators.jl")
 include("grids.jl")
+include("kernelabstractions.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
