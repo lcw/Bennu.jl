@@ -234,3 +234,30 @@ function materializepoints(referencecell::LobattoHex, vertices, connectivity)
 
     return reshape(p, (length(referencecell), length(connectivity)))
 end
+
+materializefaces(cell::AbstractCell) = materializefaces(typeof(cell))
+function materializefaces(::Type{<:LobattoLine})
+    return (
+            SA[1; 2], # edge
+            SA[1 2], # corners
+           )
+end
+
+function materializefaces(::Type{<:LobattoQuad})
+    return (
+            SA[1; 2; 3; 4; 5; 6; 7; 8], # face
+            SA[1 2 1 3;
+               3 4 2 4], # edges
+            SA[1 2 3 4] # corners
+           )
+end
+
+function materializefaces(::Type{<:LobattoHex})
+    return (
+            SA[1; 2; 3; 4; 5; 6; 7; 8], # volume
+            SA[1 2 1 3 1 5; 3 4 2 4 2 6; 5 6 5 7 3 7; 7 8 6 8 4 8], # faces
+            SA[1 3 5 7 1 2 5 6 1 2 3 4;
+               2 4 6 8 3 4 7 8 5 6 7 8], # edges
+            SA[1 2 3 4 5 6 7 8] # corners
+           )
+end
