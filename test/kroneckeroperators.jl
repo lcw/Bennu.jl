@@ -31,6 +31,8 @@
                                          PermutedDimsArray(f, (3, 1, 2))))
                 @test Array(Kron(args...) * f) ≈ Array(K * f)
             end
+
+            @test adapt(Array, Kron(args...)) == Kron(adapt.(Array, args)...)
         end
     end
 end
