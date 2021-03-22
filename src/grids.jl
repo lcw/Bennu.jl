@@ -56,15 +56,11 @@ function points_vtk(grid::NodalGrid)
 end
 
 function cells_vtk(grid::NodalGrid)
-    celltype = celltype_vtk(referencecell(grid))
-    cellconnectivity = connectivity_vtk(referencecell(grid))
+    type = celltype_vtk(referencecell(grid))
+    connectivity = connectivity_vtk(referencecell(grid))
 
-    cells = MeshCell[]
-    offset = 0
-    for e = 1:length(grid)
-        push!(cells,  MeshCell(celltype, offset .+ cellconnectivity))
-        offset += length(cellconnectivity)
-    end
+    cells = [MeshCell(type, e * length(connectivity) .+ connectivity)
+             for e = 0:length(grid)-1]
 
     return cells
 end
