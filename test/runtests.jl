@@ -23,6 +23,7 @@ include("grids.jl")
 include("kroneckeroperators.jl")
 include("operators.jl")
 include("partitions.jl")
+include("permutations.jl")
 include("quadratures.jl")
 include("tuples.jl")
 
