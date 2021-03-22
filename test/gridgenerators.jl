@@ -34,6 +34,21 @@
             cell = referencecell(grid)
             @test size(points(grid)) == (length(cell), length(grid))
             x = points(grid)
+
+            faceindices⁻, faceindices⁺ = faceindices(grid)
+            @test isapprox(adapt(Array, x[faceindices⁻]),
+                           adapt(Array, x[faceindices⁺]), atol=100eps(T))
+            matfaces = Bennu.materializefaces(cell, connectivity(grid))
+            for (f, g) in zip(matfaces, faces(grid))
+                @test size(f) == size(g)
+            end
+            for (b, d) in zip(adapt(Array,
+                                    Bennu.materializeboundaryfaces(cell,
+                                                                   matfaces)),
+                              adapt(Array, boundaryfaces(grid)))
+                @test (b ≠ 0 && d ≠ 0) || (b == d == 0)
+            end
+
             Ds = derivatives(cell)
 
             for (i, D) in enumerate(Ds)
@@ -64,4 +79,29 @@
             end
         end
     end
+
+    grid = brickgrid(LobattoCell(3), (-1:1,); periodic=(true,))
+    @test faceindices(grid) == ([1 4; 3 6], [6 3; 4 1])
+    @test boundaryfaces(grid) == [0  0;  0  0]
+
+    grid = brickgrid(LobattoCell(3, 4), (-1:1, -1:1); periodic=(true, false))
+    @test size(faces(grid)[1]) == (16, 10)
+    @test size(faces(grid)[2]) == (16, 6)
+    @test boundaryfaces(grid) == [0  0  0  0
+                                  0  0  0  0
+                                  3  3  0  0
+                                  0  0  4  4]
+
+
+    grid = brickgrid(LobattoCell(3, 4, 2), (-1:1, -1:1, -1:1);
+                     periodic=(true, false, true))
+    @test size(faces(grid)[1]) == (48, 28)
+    @test size(faces(grid)[2]) == (96, 32)
+    @test size(faces(grid)[3]) == (64, 12)
+    @test boundaryfaces(grid) == [0  0  0  0  0  0  0  0
+                                  0  0  0  0  0  0  0  0
+                                  3  3  0  0  3  3  0  0
+                                  0  0  4  4  0  0  4  4
+                                  0  0  0  0  0  0  0  0
+                                  0  0  0  0  0  0  0  0]
 end
