@@ -25,7 +25,13 @@
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T), one(T)), 9)
         @test number_of_faces(cell) == (1, 4, 4)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
-
+        @test connectivity(cell) ==  adapt(A, (([1 4 7; 2 5 8; 3 6 9],),
+                                               ([1, 4, 7], [3, 6, 9],
+                                                [1, 2, 3], [7, 8, 9]),
+                                               (1, 3, 7, 9)))
+        @test Bennu.connectivityoffsets(cell, Val(1)) == (0,)
+        @test Bennu.connectivityoffsets(cell, Val(2)) == (0, 3, 6, 9)
+        @test Bennu.connectivityoffsets(cell, Val(3)) == (0, 1, 2, 3)
         @test adapt(Array, cell) isa LobattoCell{T, Array}
 
         s = (3, 4, 2)
@@ -43,6 +49,22 @@
         @test Array(D[3] * points(cell)) ≈ fill(SVector(zero(T), zero(T),  one(T)), prod(s))
         @test number_of_faces(cell) == (1, 6, 12, 8)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
+        @test connectivity(cell)[1] == (adapt(A, reshape(collect(1:24),3,4,2)),)
+        @test connectivity(cell)[2:end] ==
+            adapt(A, (([1 13; 4 16; 7 19; 10 22], [3 15; 6 18; 9 21; 12 24],
+                       [1 13; 2 14; 3 15], [10 22; 11 23; 12 24],
+                       [1 4 7 10; 2 5 8 11; 3 6 9 12],
+                       [13 16 19 22; 14 17 20 23; 15 18 21 24]),
+                      ([1, 13], [3, 15], [10, 22], [12, 24], [1, 4, 7, 10],
+                       [3, 6, 9, 12], [13, 16, 19, 22], [15, 18, 21, 24],
+                       [1, 2, 3], [10, 11, 12], [13, 14, 15], [22, 23, 24]),
+                      (1, 3, 10, 12, 13, 15, 22, 24)))
+        @test Bennu.connectivityoffsets(cell, Val(1)) == (0,)
+        @test Bennu.connectivityoffsets(cell, Val(2)) == (0, 8, 16, 22, 28, 40)
+        @test Bennu.connectivityoffsets(cell, Val(3)) ==
+            (0, 2, 4, 6, 8, 12, 16, 20, 24, 27, 30, 33)
+        @test Bennu.connectivityoffsets(cell, Val(4)) ==
+            (0, 1, 2, 3, 4, 5, 6, 7, 8)
 
         cell = LobattoCell{T, A}(5)
         @test floattype(cell) == T
@@ -56,6 +78,9 @@
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T)), 5)
         @test number_of_faces(cell) == (1, 2)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
+        @test connectivity(cell) == adapt(A, (([1, 2, 3, 4, 5],), (1, 5)))
+        @test Bennu.connectivityoffsets(cell, Val(1)) == (0,)
+        @test Bennu.connectivityoffsets(cell, Val(2)) == (0, 1)
     end
 
     cell = LobattoCell{BigFloat}(3)
