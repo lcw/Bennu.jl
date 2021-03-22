@@ -23,14 +23,18 @@ function WriteVTK.vtk_grid(filename::AbstractString, grid::AbstractGrid,
     return vtk
 end
 
-struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P} <: AbstractGrid{C,  N}
+struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, F, G, B} <: AbstractGrid{C, N}
     referencecell::C
     vertices::V
     connectivity::Y
     points::P
+    faces::F
+    faceindices::G
+    boundaryfaces::B
 end
 
-function NodalGrid(referencecell, vertices, connectivity)
+function NodalGrid(referencecell, vertices, connectivity;
+                   faces=nothing, boundaryfaces=nothing)
     C = typeof(referencecell)
     N = size(connectivity)
     V = typeof(vertices)
@@ -39,14 +43,32 @@ function NodalGrid(referencecell, vertices, connectivity)
     points = materializepoints(referencecell, vertices, connectivity)
     P = typeof(points)
 
-    return NodalGrid{C, Tuple{N...}, V, Y, P}(referencecell, vertices,
-                                              connectivity, points)
+    if isnothing(faces)
+        faces = materializefaces(referencecell, connectivity)
+    end
+    F = typeof(faces)
+
+    faceindices = materializefaceindices(referencecell, faces)
+    G = typeof(faceindices)
+
+    if isnothing(boundaryfaces)
+        boundaryfaces = materializeboundaryfaces(referencecell, faces)
+    end
+    B = typeof(boundaryfaces)
+
+    types = (V, Y, P, F, G, B)
+    return NodalGrid{C, Tuple{N...}, types...}(referencecell, vertices,
+                                               connectivity, points, faces,
+                                               faceindices, boundaryfaces)
 end
 
 referencecell(grid::NodalGrid) = grid.referencecell
 vertices(grid::NodalGrid) = grid.vertices
 connectivity(grid::NodalGrid) = grid.connectivity
 points(grid::NodalGrid) = grid.points
+faces(grid::NodalGrid) = grid.faces
+faceindices(grid::NodalGrid) = grid.faceindices
+boundaryfaces(grid::NodalGrid) = grid.boundaryfaces
 
 function points_vtk(grid::NodalGrid)
     P = toequallyspaced(referencecell(grid))
@@ -73,4 +95,154 @@ function data_vtk!(vtk, grid::NodalGrid)
     vtk["HigherOrderDegrees", VTKCellData()] = higherorderdegrees
 
     return
+end
+
+function materializefaces(referencecell::AbstractCell, connectivity)
+    cellfaces = materializefaces(referencecell)[2:end]
+    return ntuple(i->connect(cellfaces[i], connectivity), length(cellfaces))
+end
+
+function connect(cellfaces, connectivity)
+    A = arraytype(connectivity)
+    # TODO Should we move this calculation to the GPU?
+    connectivity = adapt(Array, connectivity)
+    connectivity = reinterpret(reshape, Int, vec(connectivity))
+
+    faces = Array{Int}(undef, size(cellfaces)..., size(connectivity, 2))
+    @tullio faces[i, j, k] = connectivity[cellfaces[i, j], k]
+    faces = vec(reinterpret(reshape, SVector{size(cellfaces, 1), Int}, faces))
+
+    localfacenumbers = 1:length(faces)
+    globalfacenumbers = numbercontiguous(faces; by=sort)
+    facepermutations = tuplesortpermutation.(Tuple.(faces))
+
+    M = sparse(localfacenumbers, globalfacenumbers, facepermutations)
+    if A <: CuArray
+        M = adapt(A, GeneralSparseMatrixCSC(M))
+    end
+    return M
+end
+
+struct FaceConnectionException <: Exception end
+
+@kernel function materializefaceindices!(referencecell::AbstractCell,
+                                         faceindices⁺, faceindices⁻,
+                                         @Const(globaltolocalfaces))
+    @uniform begin
+        localfaces = rowvals(globaltolocalfaces)
+        vertexpermutations = nonzeros(globaltolocalfaces)
+        num_faces = number_of_faces(referencecell)[2]
+        num_dof_per_cell = length(referencecell)
+        conn = connectivity(referencecell)[2]
+        offsets = connectivityoffsets(referencecell, Val(2))
+    end
+
+    i, j = @index(Global, NTuple)
+    r = nzrange(globaltolocalfaces, j)
+
+    r₁ = first(r)
+    r₂ = last(r)
+
+    if r₂ - r₁ ≥ 2 || r₂ - r₁ < 0
+        throw(FaceConnectionException())
+    end
+
+    e₁, f₁ = divrem(localfaces[r₁] - 1, num_faces) .+ 1
+    e₂, f₂ = divrem(localfaces[r₂] - 1, num_faces) .+ 1
+
+    p₂₁ = vertexpermutations[r₁] ∘ inv(vertexpermutations[r₂])
+    p₁₂ = vertexpermutations[r₂] ∘ inv(vertexpermutations[r₁])
+
+    if i ≤ length(conn[f₁])
+        i₁ = i + offsets[f₁]
+        i₂ = i + offsets[f₂]
+
+        j₁ = conn[f₁][i] + (e₁ - 1) * num_dof_per_cell
+        j₂ = conn[f₂][i] + (e₂ - 1) * num_dof_per_cell
+
+        j₂₁ = getpermutedindex(conn[f₁], p₂₁, i) .+ (e₁ - 1) * num_dof_per_cell
+        j₁₂ = getpermutedindex(conn[f₂], p₁₂, i) .+ (e₂ - 1) * num_dof_per_cell
+
+        faceindices⁻[i₁, e₁] = j₁
+        faceindices⁻[i₂, e₂] = j₂
+
+        faceindices⁺[i₁, e₁] = j₁₂
+        faceindices⁺[i₂, e₂] = j₂₁
+    end
+end
+
+function materializefaceindices(referencecell::AbstractCell, faces)
+    C = typeof(referencecell)
+    A = arraytype(C)
+    globaltolocalfaces = first(faces)
+    num_localfaces, num_globalfaces = size(globaltolocalfaces)
+    num_cells = div(num_localfaces, number_of_faces(C)[2])
+    faceconn = connectivity(referencecell)[2]
+    max_num_indices_per_face = maximum(length.(faceconn))
+    num_facesindices = sum(length.(faceconn))
+
+    faceindices⁺ = fill!(A{Int, 2}(undef, num_facesindices, num_cells), 0)
+    faceindices⁻ = fill!(A{Int, 2}(undef, num_facesindices, num_cells), 0)
+
+    kernel = materializefaceindices!(device(A), (max_num_indices_per_face, 5))
+    event = Event(device(A))
+    event = kernel(referencecell, faceindices⁺, faceindices⁻,
+                   globaltolocalfaces;
+                   ndrange = (max_num_indices_per_face, num_globalfaces),
+                   dependencies = (event,))
+    wait(event)
+
+    inidices = (faceindices⁻, faceindices⁺)
+    return inidices
+end
+
+@kernel function materializeboundaryfaces!(referencecell::AbstractCell,
+                                           boundaryfaces,
+                                           @Const(globaltolocalfaces))
+    @uniform begin
+        localfaces = rowvals(globaltolocalfaces)
+        vertexpermutations = nonzeros(globaltolocalfaces)
+        num_faces = number_of_faces(referencecell)[2]
+        num_dof_per_cell = length(referencecell)
+        conn = connectivity(referencecell)[2]
+        offsets = connectivityoffsets(referencecell, Val(2))
+    end
+
+    j = @index(Global)
+    r = nzrange(globaltolocalfaces, j)
+
+    r₁ = first(r)
+    r₂ = last(r)
+
+    if r₂ - r₁ ≥ 2 || r₂ - r₁ < 0
+        throw(FaceConnectionException())
+    end
+
+    e₁, f₁ = divrem(localfaces[r₁] - 1, num_faces) .+ 1
+    e₂, f₂ = divrem(localfaces[r₂] - 1, num_faces) .+ 1
+
+    if r₁ == r₂
+        boundaryfaces[f₁, e₁] = 1
+    else
+        boundaryfaces[f₁, e₁] = 0
+        boundaryfaces[f₂, e₂] = 0
+    end
+end
+
+function materializeboundaryfaces(referencecell, faces)
+    A = arraytype(referencecell)
+    globaltolocalfaces = first(faces)
+    num_localfaces, num_globalfaces = size(globaltolocalfaces)
+    num_cells = div(num_localfaces, number_of_faces(referencecell)[2])
+    num_faces = number_of_faces(referencecell)[2]
+
+    boundaryfaces = fill!(A{Int, 2}(undef, num_faces, num_cells), 0)
+
+    kernel = materializeboundaryfaces!(device(A), (256,))
+    event = Event(device(A))
+    event = kernel(referencecell, boundaryfaces, globaltolocalfaces;
+                   ndrange = (num_globalfaces,), dependencies = (event,))
+    wait(event)
+
+    return boundaryfaces
 end
