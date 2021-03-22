@@ -12,6 +12,7 @@ using KernelAbstractions
 using LazyArrays
 using LinearAlgebra
 using Random
+using SparseArrays
 using StaticArrays
 using Tullio
 using WriteVTK
@@ -28,6 +29,7 @@ include("operators.jl")
 include("partitions.jl")
 include("permutations.jl")
 include("quadratures.jl")
+include("sparsearrays.jl")
 include("tuples.jl")
 
 @testset "examples" begin
