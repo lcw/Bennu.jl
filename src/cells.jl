@@ -100,6 +100,11 @@ mass(cell::LobattoCell) = cell.mass
 toequallyspaced(cell::LobattoCell) = cell.toequallyspaced
 degrees(cell::LobattoCell) = size(cell) .- 1
 
+number_of_faces(cell::LobattoCell) = number_of_faces(typeof(cell))
+number_of_faces(::Type{<:LobattoLine}) = (1, 2)
+number_of_faces(::Type{<:LobattoQuad}) = (1, 4, 4)
+number_of_faces(::Type{<:LobattoHex}) = (1, 6, 12, 8)
+
 celltype_vtk(::LobattoLine) = VTKCellTypes.VTK_LAGRANGE_CURVE
 celltype_vtk(::LobattoQuad) = VTKCellTypes.VTK_LAGRANGE_QUADRILATERAL
 celltype_vtk(::LobattoHex)  = VTKCellTypes.VTK_LAGRANGE_HEXAHEDRON

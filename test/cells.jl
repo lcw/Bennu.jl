@@ -23,6 +23,7 @@
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T), zero(T)), 9)
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T), one(T)), 9)
+        @test number_of_faces(cell) == (1, 4, 4)
 
         @test adapt(Array, cell) isa LobattoCell{T, Array}
 
@@ -39,6 +40,7 @@
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T),  zero(T), zero(T)), prod(s))
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T),  one(T), zero(T)), prod(s))
         @test Array(D[3] * points(cell)) ≈ fill(SVector(zero(T), zero(T),  one(T)), prod(s))
+        @test number_of_faces(cell) == (1, 6, 12, 8)
 
         cell = LobattoCell{T, A}(5)
         @test floattype(cell) == T
@@ -50,6 +52,7 @@
         @test mass(cell) isa Diagonal
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T)), 5)
+        @test number_of_faces(cell) == (1, 2)
     end
 
     cell = LobattoCell{BigFloat}(3)
