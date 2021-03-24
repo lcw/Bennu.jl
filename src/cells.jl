@@ -12,19 +12,14 @@ Base.ndims(cell::AbstractCell) = Base.ndims(typeof(cell))
 Base.size(cell::AbstractCell) = Base.size(typeof(cell))
 Base.length(cell::AbstractCell) = Base.length(typeof(cell))
 
-function lobattooperators_1d(::Type{T}, ::Type{A}, M) where {T, A}
+function lobattooperators_1d(::Type{T}, M) where {T}
     points, weights  = legendregausslobatto(BigFloat, M)
     derivative = spectralderivative(points)
     equallyspacedpoints = range(-one(BigFloat), stop=one(BigFloat), length=M)
     toequallyspaced = spectralinterpolation(points, equallyspacedpoints)
 
-    points = adapt(A, Array{T}(points))
-    weights = adapt(A, Array{T}(weights))
-    derivative = adapt(A, Array{T}(derivative))
-    toequallyspaced = adapt(A, Array{T}(toequallyspaced))
-
-    return (points=points, weights=weights, derivative=derivative,
-            toequallyspaced=toequallyspaced)
+    return map(Array{T}, (points=points, weights=weights, derivative=derivative,
+                          toequallyspaced=toequallyspaced))
 end
 
 struct LobattoCell{T, A, S, N, O, P, D, M, E, C} <: AbstractCell{T, A, S, N}
@@ -40,10 +35,10 @@ end
 function LobattoCell{T, A}(dims...) where {T, A}
     N = length(dims)
     if all(dims[1] .== dims)
-        oall = lobattooperators_1d(T, A, first(dims))
+        oall = adapt(A, lobattooperators_1d(T, first(dims)))
         o = ntuple(i->oall, N)
     else
-        o = ntuple(i->lobattooperators_1d(T, A, dims[i]), N)
+        o = ntuple(i->adapt(A, lobattooperators_1d(T, dims[i])), N)
     end
 
     points_1d = ntuple(i->reshape(o[i].points,
