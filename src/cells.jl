@@ -41,10 +41,12 @@ function LobattoCell{T, A}(dims...) where {T, A}
         o = ntuple(i->adapt(A, lobattooperators_1d(T, dims[i])), N)
     end
 
-    points_1d = ntuple(i->reshape(o[i].points,
-                                  ntuple(j->ifelse(i==j, dims[i], 1), N)), N)
-    weights_1d = ntuple(i->reshape(o[i].weights,
-                                   ntuple(j->ifelse(i==j, dims[i], 1), N)), N)
+    points_1d = ntuple(N) do i
+        return reshape(o[i].points, ntuple(j->ifelse(i==j, dims[i], 1), N))
+    end
+    weights_1d = ntuple(N) do i
+        return reshape(o[i].weights, ntuple(j->ifelse(i==j, dims[i], 1), N))
+    end
 
     points = vec(SVector.(points_1d...))
     # TODO Should we use a struct of arrays style layout?
@@ -56,10 +58,10 @@ function LobattoCell{T, A}(dims...) where {T, A}
     #     points = reinterpret(reshape, SVector{N, T}, points)
     # end
 
-    derivatives = ntuple(i->Kron(reverse(ntuple(j->ifelse(i==j,
-                                                          o[i].derivative,
-                                                          Eye{T}(dims[j])),
-                                                N))...), N)
+    derivatives = ntuple(N) do i
+        tup = ntuple(j->ifelse(i==j, o[i].derivative, Eye{T}(dims[j])), N)
+        return Kron(reverse(tup)...)
+    end
 
     mass = Diagonal(vec(.*(weights_1d...)))
 
