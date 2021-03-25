@@ -12,7 +12,7 @@ function brickgrid(referencecell::LobattoCell, coordinates::Tuple;
     end
 
     dims = length.(coordinates) .- 1
-    if !all(dims .> 1)
+    if !all(dims .>= 1)
         throw(ArgumentError("Each coordinate needs to be of atleast length 2."))
     end
 
