@@ -2,6 +2,7 @@ module Bennu
 
 using Adapt
 using CUDA
+using CUDAKernels
 using FillArrays
 using KernelAbstractions
 using LazyArrays

@@ -5,6 +5,7 @@ using Pkg: Pkg
 using Adapt
 using Combinatorics
 using CUDA
+using CUDAKernels
 using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
 using FillArrays
