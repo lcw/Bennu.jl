@@ -15,6 +15,7 @@ using LinearAlgebra
 using Random
 using SparseArrays
 using StaticArrays
+using StructArrays
 using Tullio
 using WriteVTK
 
@@ -31,6 +32,7 @@ include("partitions.jl")
 include("permutations.jl")
 include("quadratures.jl")
 include("sparsearrays.jl")
+include("structarrays.jl")
 include("tuples.jl")
 
 @testset "examples" begin
