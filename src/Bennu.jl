@@ -5,6 +5,7 @@ using ArrayInterface
 using CUDA
 using CUDAKernels
 using FillArrays
+using GPUArrays
 using KernelAbstractions
 using LazyArrays
 using LinearAlgebra
@@ -12,6 +13,7 @@ using LoopVectorization
 using SparseArrays
 using StaticArrays
 using StaticArrays: tuple_prod, tuple_length, size_to_tuple
+using StructArrays
 using Tullio
 using WriteVTK
 
@@ -37,6 +39,7 @@ include("operators.jl")
 include("partitions.jl")
 include("quadratures.jl")
 include("sparsearrays.jl")
+include("structarrays.jl")
 include("tuples.jl")
 
 end
