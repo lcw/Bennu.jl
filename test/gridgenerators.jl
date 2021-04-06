@@ -33,11 +33,10 @@
 
             cell = referencecell(grid)
             @test size(points(grid)) == (length(cell), length(grid))
-            x = points(grid)
 
-            faceindices⁻, faceindices⁺ = faceindices(grid)
-            @test isapprox(adapt(Array, x[faceindices⁻]),
-                           adapt(Array, x[faceindices⁺]), atol=100eps(T))
+            x = adapt(Array, points(grid))
+            faceindices⁻, faceindices⁺ = adapt.(Array, faceindices(grid))
+            @test isapprox(x[faceindices⁻], x[faceindices⁺], atol=100eps(T))
             matfaces = Bennu.materializefaces(cell, connectivity(grid))
             for (f, g) in zip(matfaces, faces(grid))
                 @test size(f) == size(g)
@@ -53,7 +52,8 @@
 
             for (i, D) in enumerate(Ds)
                 otherdims = filter(!isequal(i), 1:length(Ds))
-                dx = reshape(Array(D * x), (length(cell), size(grid)...))
+                D = adapt(Array, D)
+                dx = reshape(D * x, (length(cell), size(grid)...))
                 pdx = vec(minimum(dx, dims=(1, (otherdims .+ 1)...)))
                 qdx = vec(maximum(dx, dims=(1, (otherdims .+ 1)...)))
                 cdx = diff(collect(coordinates[i]))./2
