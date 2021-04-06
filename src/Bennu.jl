@@ -1,6 +1,7 @@
 module Bennu
 
 using Adapt
+using ArrayInterface
 using CUDA
 using CUDAKernels
 using FillArrays
