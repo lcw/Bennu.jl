@@ -36,16 +36,16 @@
         @test vertices(grid) === verts
         @test connectivity(grid) === conn
         @test size(points(grid)) == (length(cell), length(conn))
-        D = derivatives(referencecell(grid))
-        @test Array(D[1] * points(grid)) ≈
+        D = adapt(Array, derivatives(referencecell(grid)))
+        x = adapt(Array, points(grid))
+        @test D[1] * x ≈
             fill(SVector(one(T)/2, zero(T)), size(points(grid)))
-        @test Array(D[2] * points(grid)) ≈
+        @test D[2] * x ≈
             fill(SVector(zero(T), one(T)/2), size(points(grid)))
 
-        faceindices⁻, faceindices⁺ = faceindices(grid)
-        x = points(grid)
-        @test isapprox(adapt(Array, x[faceindices⁻]),
-                       adapt(Array, x[faceindices⁺]), atol=10eps(T))
+        faceindices⁻, faceindices⁺ = adapt.(Array, faceindices(grid))
+        x = adapt(Array, points(grid))
+        @test isapprox(x[faceindices⁻], x[faceindices⁺], atol=10eps(T))
 
         if T != BigFloat
             mktempdir() do tmp
@@ -115,10 +115,9 @@
                             ])
             cell = LobattoCell{T,A}(4,4,5)
             grid = NodalGrid(cell, verts, conn)
-            faceindices⁻, faceindices⁺ = faceindices(grid)
-            x = points(grid)
-            @test isapprox(adapt(Array, x[faceindices⁻]),
-                           adapt(Array, x[faceindices⁺]), atol=100eps(T))
+            faceindices⁻, faceindices⁺ = adapt.(Array, faceindices(grid))
+            x = adapt(Array, points(grid))
+            @test isapprox(x[faceindices⁻], x[faceindices⁺], atol=100eps(T))
             @test size(faces(grid)[1]) == (54, 46)
             @test size(faces(grid)[2]) == (108, 76)
             @test size(faces(grid)[3]) == (72, 40)
@@ -148,10 +147,9 @@
                             ])
             cell = LobattoCell{T,A}(4,4)
             grid = NodalGrid(cell, verts, conn)
-            faceindices⁻, faceindices⁺ = faceindices(grid)
-            x = points(grid)
-            @test isapprox(adapt(Array, x[faceindices⁻]),
-                           adapt(Array, x[faceindices⁺]), atol=10eps(T))
+            faceindices⁻, faceindices⁺ = adapt.(Array, faceindices(grid))
+            x = adapt(Array, points(grid))
+            @test isapprox(x[faceindices⁻], x[faceindices⁺], atol=10eps(T))
             @test size(faces(grid)[1]) == (16, 12)
             @test size(faces(grid)[2]) == (16, 9)
             @test boundaryfaces(grid) == adapt(A, [1  0  0  1
@@ -170,10 +168,9 @@
                             ])
             cell = LobattoCell{T,A}(6)
             grid = NodalGrid(cell, verts, conn)
-            faceindices⁻, faceindices⁺ = faceindices(grid)
-            x = points(grid)
-            @test isapprox(adapt(Array, x[faceindices⁻]),
-                           adapt(Array, x[faceindices⁺]), atol=10eps(T))
+            faceindices⁻, faceindices⁺ = adapt.(Array, faceindices(grid))
+            x = adapt(Array, points(grid))
+            @test isapprox(x[faceindices⁻], x[faceindices⁺], atol=10eps(T))
             @test size(faces(grid)[1]) == (4, 3)
             @test boundaryfaces(grid) == adapt(A, [1  1
                                                    0  0])

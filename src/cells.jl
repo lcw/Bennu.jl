@@ -167,9 +167,10 @@ end
 
 function materializepoints(referencecell::LobattoLine, vertices, connectivity)
     T = floattype(referencecell)
+    A = arraytype(referencecell)
     r = points_1d(referencecell)
-    p = similar(vertices, SVector{1, T},
-                (size(referencecell)..., length(connectivity)))
+    p = fieldarray(undef, SVector{1, T}, A,
+                   (size(referencecell)..., length(connectivity)))
     connectivity = vec(connectivity)
     vertices = vec(vertices)
 
@@ -187,9 +188,11 @@ end
 
 function materializepoints(referencecell::LobattoQuad, vertices, connectivity)
     T = floattype(referencecell)
+    A = arraytype(referencecell)
     r = vec.(points_1d(referencecell))
-    p = similar(vertices, SVector{2, T},
-                (size(referencecell)..., length(connectivity)))
+    p = fieldarray(undef, SVector{2, T}, A,
+                   (size(referencecell)..., length(connectivity)))
+
     connectivity = vec(connectivity)
     vertices = vec(vertices)
 
@@ -209,9 +212,11 @@ end
 
 function materializepoints(referencecell::LobattoHex, vertices, connectivity)
     T = floattype(referencecell)
+    A = arraytype(referencecell)
     r = vec.(points_1d(referencecell))
-    p = similar(vertices, SVector{3, T},
-                (size(referencecell)..., length(connectivity)))
+    p = fieldarray(undef, SVector{3, T}, A,
+                   (size(referencecell)..., length(connectivity)))
+
     connectivity = vec(connectivity)
     vertices = vec(vertices)
 
