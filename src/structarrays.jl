@@ -111,3 +111,7 @@ function device(s::StructArray)
     I || throw("device error")
     return first(ds)
 end
+
+function Tullio.storage_type(S::StructArray)
+    return Tullio.storage_type(StructArrays.components(S)...)
+end
