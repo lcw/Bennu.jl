@@ -25,6 +25,8 @@ export spectralderivative, spectralinterpolation, legendregauss,
        floattype, arraytype, points, mass, derivatives, degrees,
        celltype, referencecell, vertices, connectivity, points, brickgrid
 
+export components
+
 export faces, faceindices, boundaryfaces, number_of_faces
 
 include("permutations.jl")
