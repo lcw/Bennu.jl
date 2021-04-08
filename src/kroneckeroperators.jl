@@ -1,4 +1,5 @@
 Adapt.adapt_structure(to, K::Kron) = Kron(map(x->Adapt.adapt(to, x), K.args)...)
+components(K::Kron) = LazyArrays.arguments(K)
 
 function Base.copy(M::Mul{LazyArrays.ApplyLayout{typeof(kron)},
                           L, Kron{T, 2, Tuple{D}}, F}) where

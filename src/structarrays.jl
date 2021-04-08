@@ -115,3 +115,5 @@ end
 function Tullio.storage_type(S::StructArray)
     return Tullio.storage_type(StructArrays.components(S)...)
 end
+
+components(S::StructArray) = StructArrays.components(S)
