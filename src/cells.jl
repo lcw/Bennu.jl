@@ -186,6 +186,37 @@ function materializepoints(referencecell::LobattoLine, vertices, connectivity)
     return reshape(p, (length(referencecell), length(connectivity)))
 end
 
+function materializemetrics(referencecell::LobattoLine, points)
+    T = floattype(referencecell)
+    A = arraytype(referencecell)
+    num_cellindices =  length(referencecell)
+    num_cells = last(size(points))
+    faceconn = connectivity(referencecell)[2]
+    num_facesindices = sum(length.(faceconn))
+
+    metrics = fieldarray(undef, (g=SMatrix{1, 1, T, 1}, J=T), A,
+                         (num_cellindices, num_cells))
+    g, J = components(metrics)
+
+    D₁ = only(derivatives(referencecell))
+    x₁ = only(components(points))
+
+    J .= D₁ * x₁
+    @. g = tuple(inv(J))
+
+    facemetrics = fieldarray(undef, (n=SVector{1, T}, J=T), A,
+                             (num_facesindices, num_cells))
+    n, fJ = components(facemetrics)
+
+    n₁, n₂ = faceviews(referencecell, n)
+
+    @tullio n₁[e] = tuple(-sign(J[  1, e]))
+    @tullio n₂[e] = tuple( sign(J[end, e]))
+    fJ .= oneunit(T)
+
+    return (metrics, facemetrics)
+end
+
 function materializepoints(referencecell::LobattoQuad, vertices, connectivity)
     T = floattype(referencecell)
     A = arraytype(referencecell)
@@ -208,6 +239,53 @@ function materializepoints(referencecell::LobattoQuad, vertices, connectivity)
                   end) (i in axes(p, 1), j in axes(p, 2), e in axes(p, 3))
 
     return reshape(p, (length(referencecell), length(connectivity)))
+end
+
+function materializemetrics(referencecell::LobattoQuad, points)
+    T = floattype(referencecell)
+    A = arraytype(referencecell)
+    num_cellindices =  length(referencecell)
+    num_cells = last(size(points))
+    faceconn = connectivity(referencecell)[2]
+    num_facesindices = sum(length.(faceconn))
+
+    metrics = fieldarray(undef, (g=SMatrix{2, 2, T, 4}, J=T), A,
+                         (num_cellindices, num_cells))
+    g, J = components(metrics)
+
+    D₁, D₂ = derivatives(referencecell)
+    x₁, x₂ = components(points)
+    h = fieldarray(SMatrix{2, 2, T, 4}, (D₁ * x₁, D₁ * x₂, D₂ * x₁, D₂ * x₂))
+
+    @. J = det(h)
+    @. g = inv(h)
+
+    facemetrics = fieldarray(undef, (n=SVector{2, T}, J=T), A,
+                             (num_facesindices, num_cells))
+    n, fJ = components(facemetrics)
+
+    J = reshape(J, size(referencecell)..., :)
+    g₁₁, g₂₁, g₁₂, g₂₂ = reshape.(components(g), size(referencecell)..., :)
+    n₁, n₂ = components(n)
+    n₁₁, n₁₂, n₁₃, n₁₄ = faceviews(referencecell, n₁)
+    n₂₁, n₂₂, n₂₃, n₂₄ = faceviews(referencecell, n₂)
+
+    @tullio avx=false n₁₁[j, e] = -J[1, j, e] * g₁₁[1, j, e]
+    @tullio avx=false n₂₁[j, e] = -J[1, j, e] * g₁₂[1, j, e]
+
+    @tullio avx=false n₁₂[j, e] = J[end, j, e] * g₁₁[end, j, e]
+    @tullio avx=false n₂₂[j, e] = J[end, j, e] * g₁₂[end, j, e]
+
+    @tullio avx=false n₁₃[i, e] = -J[i, 1, e] * g₂₁[i, 1, e]
+    @tullio avx=false n₂₃[i, e] = -J[i, 1, e] * g₂₂[i, 1, e]
+
+    @tullio avx=false n₁₄[i, e] = J[i, end, e] * g₂₁[i, end, e]
+    @tullio avx=false n₂₄[i, e] = J[i, end, e] * g₂₂[i, end, e]
+
+    @. fJ = hypot(n₁, n₂)
+    @. n /= fJ
+
+    return (metrics, facemetrics)
 end
 
 function materializepoints(referencecell::LobattoHex, vertices, connectivity)
@@ -237,6 +315,101 @@ function materializepoints(referencecell::LobattoHex, vertices, connectivity)
                         e in axes(p, 4))
 
     return reshape(p, (length(referencecell), length(connectivity)))
+end
+
+function materializemetrics(referencecell::LobattoHex, points)
+    T = floattype(referencecell)
+    A = arraytype(referencecell)
+    num_cellindices =  length(referencecell)
+    num_cells = last(size(points))
+    faceconn = connectivity(referencecell)[2]
+    num_facesindices = sum(length.(faceconn))
+
+    metrics = fieldarray(undef, (g=SMatrix{3, 3, T, 9}, J=T), A,
+                         (num_cellindices, num_cells))
+    g, J = components(metrics)
+
+    D₁, D₂, D₃ = derivatives(referencecell)
+    x₁, x₂, x₃ = components(points)
+
+    h = fieldarray(SMatrix{3, 3, T, 9}, (D₁ * x₁, D₁ * x₂, D₁ * x₃,
+                                         D₂ * x₁, D₂ * x₂, D₂ * x₃,
+                                         D₃ * x₁, D₃ * x₂, D₃ * x₃))
+    @. J = det(h)
+
+    # Instead of
+    # ```julia
+    # @. g = inv(h)
+    # ```
+    # we are using the curl invariant formulation of Kopriva, equation (37) of
+    # <https://doi.org/10.1007/s10915-005-9070-8>.
+
+    h₁₁, h₂₁, h₃₁, h₁₂, h₂₂, h₃₂, h₁₃, h₂₃, h₃₃ = components(h)
+
+    xh₁₁ = x₂ .* h₃₁ .- x₃ .* h₂₁
+    xh₂₁ = x₃ .* h₁₁ .- x₁ .* h₃₁
+    xh₃₁ = x₁ .* h₂₁ .- x₂ .* h₁₁
+
+    xh₁₂ = x₂ .* h₃₂ .- x₃ .* h₂₂
+    xh₂₂ = x₃ .* h₁₂ .- x₁ .* h₃₂
+    xh₃₂ = x₁ .* h₂₂ .- x₂ .* h₁₂
+
+    xh₁₃ = x₂ .* h₃₃ .- x₃ .* h₂₃
+    xh₂₃ = x₃ .* h₁₃ .- x₁ .* h₃₃
+    xh₃₃ = x₁ .* h₂₃ .- x₂ .* h₁₃
+
+    g₁₁, g₂₁, g₃₁, g₁₂, g₂₂, g₃₂, g₁₃, g₂₃, g₃₃ = components(g)
+
+    g₁₁ .= (D₂ * xh₁₃ .- D₃ * xh₁₂) ./ (2 .* J)
+    g₂₁ .= (D₃ * xh₁₁ .- D₁ * xh₁₃) ./ (2 .* J)
+    g₃₁ .= (D₁ * xh₁₂ .- D₂ * xh₁₁) ./ (2 .* J)
+
+    g₁₂ .= (D₂ * xh₂₃ .- D₃ * xh₂₂) ./ (2 .* J)
+    g₂₂ .= (D₃ * xh₂₁ .- D₁ * xh₂₃) ./ (2 .* J)
+    g₃₂ .= (D₁ * xh₂₂ .- D₂ * xh₂₁) ./ (2 .* J)
+
+    g₁₃ .= (D₂ * xh₃₃ .- D₃ * xh₃₂) ./ (2 .* J)
+    g₂₃ .= (D₃ * xh₃₁ .- D₁ * xh₃₃) ./ (2 .* J)
+    g₃₃ .= (D₁ * xh₃₂ .- D₂ * xh₃₁) ./ (2 .* J)
+
+    facemetrics = fieldarray(undef, (n=SVector{3, T}, J=T), A,
+                             (num_facesindices, num_cells))
+    n, fJ = components(facemetrics)
+
+    J = reshape(J, size(referencecell)..., :)
+    g₁₁, g₂₁, g₃₁, g₁₂, g₂₂, g₃₂, g₁₃, g₂₃, g₃₃ =
+        reshape.(components(g), size(referencecell)..., :)
+
+    n₁, n₂, n₃ = components(n)
+    n₁₁, n₁₂, n₁₃, n₁₄, n₁₅, n₁₆ = faceviews(referencecell, n₁)
+    n₂₁, n₂₂, n₂₃, n₂₄, n₂₅, n₂₆ = faceviews(referencecell, n₂)
+    n₃₁, n₃₂, n₃₃, n₃₄, n₃₅, n₃₆ = faceviews(referencecell, n₃)
+
+    @tullio avx=false n₁₁[j, k, e] = -J[  1,   j,   k, e] * g₁₁[  1,   j,   k, e]
+    @tullio avx=false n₁₂[j, k, e] =  J[end,   j,   k, e] * g₁₁[end,   j,   k, e]
+    @tullio avx=false n₁₃[i, k, e] = -J[  i,   1,   k, e] * g₂₁[  i,   1,   k, e]
+    @tullio avx=false n₁₄[i, k, e] =  J[  i, end,   k, e] * g₂₁[  i, end,   k, e]
+    @tullio avx=false n₁₅[i, j, e] = -J[  i,   j,   1, e] * g₃₁[  i,   j,   1, e]
+    @tullio avx=false n₁₆[i, j, e] =  J[  i,   j, end, e] * g₃₁[  i,   j, end, e]
+
+    @tullio avx=false n₂₁[j, k, e] = -J[  1,   j,   k, e] * g₁₂[  1,   j,   k, e]
+    @tullio avx=false n₂₂[j, k, e] =  J[end,   j,   k, e] * g₁₂[end,   j,   k, e]
+    @tullio avx=false n₂₃[i, k, e] = -J[  i,   1,   k, e] * g₂₂[  i,   1,   k, e]
+    @tullio avx=false n₂₄[i, k, e] =  J[  i, end,   k, e] * g₂₂[  i, end,   k, e]
+    @tullio avx=false n₂₅[i, j, e] = -J[  i,   j,   1, e] * g₃₂[  i,   j,   1, e]
+    @tullio avx=false n₂₆[i, j, e] =  J[  i,   j, end, e] * g₃₂[  i,   j, end, e]
+
+    @tullio avx=false n₃₁[j, k, e] = -J[  1,   j,   k, e] * g₁₃[  1,   j,   k, e]
+    @tullio avx=false n₃₂[j, k, e] =  J[end,   j,   k, e] * g₁₃[end,   j,   k, e]
+    @tullio avx=false n₃₃[i, k, e] = -J[  i,   1,   k, e] * g₂₃[  i,   1,   k, e]
+    @tullio avx=false n₃₄[i, k, e] =  J[  i, end,   k, e] * g₂₃[  i, end,   k, e]
+    @tullio avx=false n₃₅[i, j, e] = -J[  i,   j,   1, e] * g₃₃[  i,   j,   1, e]
+    @tullio avx=false n₃₆[i, j, e] =  J[  i,   j, end, e] * g₃₃[  i,   j, end, e]
+
+    @. fJ = norm(n)
+    @. n /= fJ
+
+    return (metrics, facemetrics)
 end
 
 materializefaces(cell::AbstractCell) = materializefaces(typeof(cell))

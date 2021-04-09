@@ -29,6 +29,8 @@ export fieldarray
 
 export components
 
+export metrics, facemetrics
+
 export faces, faceindices, boundaryfaces, number_of_faces, faceviews
 
 include("permutations.jl")
