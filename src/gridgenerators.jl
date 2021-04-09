@@ -5,6 +5,14 @@ struct HilbertOrdering <: AbstractOrdering end
 function brickgrid(referencecell::LobattoCell, coordinates::Tuple;
                    ordering::AbstractOrdering=CartesianOrdering(),
                    periodic=nothing)
+    return brickgrid(identity, referencecell, coordinates;
+                   ordering=ordering, periodic=periodic)
+end
+
+function brickgrid(warp::Function, referencecell::LobattoCell,
+                   coordinates::Tuple;
+                   ordering::AbstractOrdering=CartesianOrdering(),
+                   periodic=nothing)
 
     M = ndims(referencecell)
     if M != length(coordinates)
@@ -225,6 +233,6 @@ function brickgrid(referencecell::LobattoCell, coordinates::Tuple;
         return S
     end
 
-    return NodalGrid(referencecell, vertices, connectivity;
+    return NodalGrid(warp, referencecell, vertices, connectivity;
                      faces=faces, boundaryfaces=boundaryfaces)
 end

@@ -23,17 +23,19 @@ function WriteVTK.vtk_grid(filename::AbstractString, grid::AbstractGrid,
     return vtk
 end
 
-struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, F, G, B} <: AbstractGrid{C, N}
+struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, Q, F, G, H, B} <: AbstractGrid{C, N}
     referencecell::C
     vertices::V
     connectivity::Y
     points::P
+    metrics::Q
     faces::F
     faceindices::G
+    facemetrics::H
     boundaryfaces::B
 end
 
-function NodalGrid(referencecell, vertices, connectivity;
+function NodalGrid(warp::Function, referencecell, vertices, connectivity;
                    faces=nothing, boundaryfaces=nothing)
     C = typeof(referencecell)
     N = size(connectivity)
@@ -41,7 +43,12 @@ function NodalGrid(referencecell, vertices, connectivity;
     Y = typeof(connectivity)
 
     points = materializepoints(referencecell, vertices, connectivity)
+    points = warp.(points)
     P = typeof(points)
+
+    metrics, facemetrics = materializemetrics(referencecell, points)
+    Q = typeof(metrics)
+    H = typeof(facemetrics)
 
     if isnothing(faces)
         faces = materializefaces(referencecell, connectivity)
@@ -56,18 +63,27 @@ function NodalGrid(referencecell, vertices, connectivity;
     end
     B = typeof(boundaryfaces)
 
-    types = (V, Y, P, F, G, B)
+    types = (V, Y, P, Q, F, G, H, B)
     return NodalGrid{C, Tuple{N...}, types...}(referencecell, vertices,
-                                               connectivity, points, faces,
-                                               faceindices, boundaryfaces)
+                                               connectivity, points, metrics,
+                                               faces, faceindices, facemetrics,
+                                               boundaryfaces)
+end
+
+function NodalGrid(referencecell, vertices, connectivity;
+                   faces=nothing, boundaryfaces=nothing)
+    return NodalGrid(identity, referencecell, vertices, connectivity;
+                     faces=faces, boundaryfaces=boundaryfaces)
 end
 
 referencecell(grid::NodalGrid) = grid.referencecell
 vertices(grid::NodalGrid) = grid.vertices
 connectivity(grid::NodalGrid) = grid.connectivity
 points(grid::NodalGrid) = grid.points
+metrics(grid::NodalGrid) = grid.metrics
 faces(grid::NodalGrid) = grid.faces
 faceindices(grid::NodalGrid) = grid.faceindices
+facemetrics(grid::NodalGrid) = grid.facemetrics
 boundaryfaces(grid::NodalGrid) = grid.boundaryfaces
 
 function points_vtk(grid::NodalGrid)
