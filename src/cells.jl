@@ -266,29 +266,42 @@ function materializefaces(::Type{<:LobattoHex})
            )
 end
 
-function connectivityoffsets(cell::LobattoCell, ::Val{N}) where {N}
+@inline function connectivityoffsets(cell::LobattoCell, ::Val{N}) where {N}
     connectivityoffsets(typeof(cell), Val(N))
 end
-connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoLine} = (0,)
-connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoLine} = (0, 1)
+@inline function connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoLine}
+    L, = size(C)
+    return (0, L)
+end
+@inline function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoLine}
+    return (0, 1, 2)
+end
 
-connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoQuad} = (0,)
-function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoQuad}
+@inline function connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoQuad}
     L, M = size(C)
-    return (0, M, 2M, 2M+L)
+    return (0, L*M)
 end
-connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoQuad} = (0, 1, 2, 3)
+@inline function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoQuad}
+    L, M = size(C)
+    return (0, M, 2M, 2M+L, 2M+2L)
+end
+@inline function connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoQuad}
+    return (0, 1, 2, 3, 4)
+end
 
-connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoHex} = (0,)
-function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoHex}
+@inline function connectivityoffsets(::Type{C}, ::Val{1}) where {C<:LobattoHex}
     L, M, N = size(C)
-    return cumsum((0, M*N, M*N, L*N, L*N, L*M))
+    return (0, L*M*N)
 end
-function connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoHex}
+@inline function connectivityoffsets(::Type{C}, ::Val{2}) where {C<:LobattoHex}
     L, M, N = size(C)
-    return cumsum((0, N, N, N, N, M, M, M, M, L, L, L))
+    return cumsum((0, M*N, M*N, L*N, L*N, L*M, L*M))
 end
-function connectivityoffsets(::Type{C}, ::Val{4}) where {C<:LobattoHex}
+@inline function connectivityoffsets(::Type{C}, ::Val{3}) where {C<:LobattoHex}
+    L, M, N = size(C)
+    return cumsum((0, N, N, N, N, M, M, M, M, L, L, L, L))
+end
+@inline function connectivityoffsets(::Type{C}, ::Val{4}) where {C<:LobattoHex}
     return (0, 1, 2, 3, 4, 5, 6, 7, 8)
 end
 
