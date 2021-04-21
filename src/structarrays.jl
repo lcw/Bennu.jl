@@ -1,3 +1,9 @@
+const GPUStructArray0{T, N} =
+    StructArray{T, N, <: Tuple{Vararg{GPUArrays.AnyGPUArray}}}
+const GPUStructArray1{T, N} =
+    StructArray{T, N, <: NamedTuple{U, <: Tuple{Vararg{Union{GPUArrays.AnyGPUArray, GPUStructArray0}}}}} where {U}
+const GPUStructArray{T, N} = Union{GPUStructArray0{T, N}, GPUStructArray1{T, N}}
+
 # These two similar functions can be removed once
 # <https://github.com/JuliaArrays/StructArrays.jl/pull/94>
 # is accepted.
@@ -75,15 +81,15 @@ end
 # We follow GPUArrays approach of coping the whole array to the host when
 # outputting a StructArray backed by GPU arrays.
 convert_to_cpu(xs) = adapt(Array, xs)
-function Base.print_array(io::IO, X::StructArray{<:Any,0})
+function Base.print_array(io::IO, X::GPUStructArray{<:Any,0})
     X = convert_to_cpu(X)
     isassigned(X) ? show(io, X[]) : print(io, undef_ref_str)
 end
-Base.print_array(io::IO, X::StructArray{<:Any,1}) =
+Base.print_array(io::IO, X::GPUStructArray{<:Any,1}) =
     Base.print_matrix(io, convert_to_cpu(X))
-Base.print_array(io::IO, X::StructArray{<:Any,2}) where {T} =
+Base.print_array(io::IO, X::GPUStructArray{<:Any,2}) where {T} =
     Base.print_matrix(io, convert_to_cpu(X))
-Base.print_array(io::IO, X::StructArray{<:Any,<:Any}) =
+Base.print_array(io::IO, X::GPUStructArray{<:Any,<:Any}) =
     Base.show_nd(io, convert_to_cpu(X), Base.print_matrix, true)
 
 # These definitions allow `StructArray` and `StaticArrays.SArray` to play nicely
@@ -98,7 +104,7 @@ StructArrays.component(s::SArray, i) = getindex(s, i)
     @inbounds A[I] = x
 end
 
-function Base.fill!(A::StructArray, x)
+function Base.fill!(A::GPUStructArray, x)
     event = Event(device(A))
     event = fill_kernel!(device(A), 256)(A, x, ndrange = length(A),
                                          dependencies = (event, ))
