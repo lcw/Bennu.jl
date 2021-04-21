@@ -246,3 +246,17 @@ function materializeboundaryfaces(referencecell, faces)
 
     return boundaryfaces
 end
+
+function faceviews(referencecell, A::AbstractMatrix)
+    num_faces = number_of_faces(referencecell)[2]
+    offsets = connectivityoffsets(referencecell, Val(2))
+    facesizes = size.(connectivity(referencecell)[2])
+
+    if last(offsets) != size(A, 1)
+        throw(ArgumentError("The first dimension of A needs to contain the face degrees of freedom."))
+    end
+
+    return ntuple(Val(num_faces)) do f
+        reshape(view(A, (1+offsets[f]):offsets[f+1], :), facesizes[f]..., :)
+    end
+end
