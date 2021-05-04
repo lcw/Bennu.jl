@@ -20,6 +20,8 @@
         @test length(cell) == 9
         @test sum(mass(cell)) .≈ 4
         @test mass(cell) isa Diagonal
+        @test sum(facemass(cell)) .≈ 8
+        @test facemass(cell) isa Diagonal
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T), zero(T)), 9)
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T), one(T)), 9)
@@ -43,6 +45,8 @@
         @test length(cell) == prod(s)
         @test sum(mass(cell)) .≈ 8
         @test mass(cell) isa Diagonal
+        @test sum(facemass(cell)) .≈ 24
+        @test facemass(cell) isa Diagonal
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T),  zero(T), zero(T)), prod(s))
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T),  one(T), zero(T)), prod(s))
@@ -75,6 +79,8 @@
         @test length(cell) == 5
         @test sum(mass(cell)) .≈ 2
         @test mass(cell) isa Diagonal
+        @test sum(facemass(cell)) .≈ 2
+        @test facemass(cell) isa Diagonal
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T)), 5)
         @test number_of_faces(cell) == (1, 2)

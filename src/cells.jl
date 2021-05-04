@@ -22,12 +22,13 @@ function lobattooperators_1d(::Type{T}, M) where {T}
                           toequallyspaced=toequallyspaced))
 end
 
-struct LobattoCell{T, A, S, N, O, P, D, M, E, C} <: AbstractCell{T, A, S, N}
+struct LobattoCell{T, A, S, N, O, P, D, M, FM, E, C} <: AbstractCell{T, A, S, N}
     points_1d::O
     weights_1d::O
     points::P
     derivatives::D
     mass::M
+    facemass::FM
     toequallyspaced::E
     connectivity::C
 end
@@ -65,11 +66,23 @@ function LobattoCell{T, A}(dims...) where {T, A}
 
     mass = Diagonal(vec(.*(weights_1d...)))
 
+    facemass = if N == 1
+      adapt(A, Diagonal([T(1), T(1)]))
+    elseif N == 2
+      ω1, ω2 = weights_1d
+      Diagonal(vcat(repeat(vec(ω2), 2), repeat(vec(ω1), 2)))
+    elseif N == 3
+      ω1, ω2, ω3 = weights_1d
+      Diagonal(vcat(repeat(vec(ω2 .* ω3), 2),
+                    repeat(vec(ω1 .* ω3), 2),
+                    repeat(vec(ω1 .* ω2), 2)))
+    end
+
     toequallyspaced = Kron(reverse(ntuple(i->o[i].toequallyspaced, N))...)
 
     connectivity = adapt(A, materializeconnectivity(LobattoCell, dims...))
 
-    args = (points_1d, weights_1d, points, derivatives, mass, toequallyspaced,
+    args = (points_1d, weights_1d, points, derivatives, mass, facemass, toequallyspaced,
             connectivity)
     LobattoCell{T, A, Tuple{dims...}, N, typeof.(args[2:end])...}(args...)
 end
@@ -95,6 +108,7 @@ weights_1d(cell::LobattoCell) = cell.weights_1d
 points(cell::LobattoCell) = cell.points
 derivatives(cell::LobattoCell) = cell.derivatives
 mass(cell::LobattoCell) = cell.mass
+facemass(cell::LobattoCell) = cell.facemass
 toequallyspaced(cell::LobattoCell) = cell.toequallyspaced
 connectivity(cell::LobattoCell) = cell.connectivity
 degrees(cell::LobattoCell) = size(cell) .- 1
