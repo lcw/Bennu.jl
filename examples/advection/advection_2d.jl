@@ -96,7 +96,7 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
         if outputvtk && step % ceil(Int, timeend / 100 / dt) == 0
             filename = "step$(lpad(step, 6, '0'))"
             vtkfile = vtk_grid(joinpath(vtkdir, filename), grid)
-            P = Bennu.toequallyspaced(cell)
+            P = toequallyspaced(cell)
             vtkfile["q"] = vec(Array(P * q))
             vtk_save(vtkfile)
             pvd[time] = vtkfile
