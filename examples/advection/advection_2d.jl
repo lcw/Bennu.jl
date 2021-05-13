@@ -23,7 +23,7 @@ sineproduct(x, t) = prod(sin.(x .- v .* t))
 
 function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
   Nq = N + 1
-  
+
   cell = LobattoCell{FT, A}(Nq, Nq)
 
   vert1d = range(FT(0), stop=FT(2π), length=K+1)
@@ -44,13 +44,13 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
   M = mass(cell)
   D₁, D₂ = derivatives(cell)
   MJ = M * J
-  
+
   facenormal, faceJ = components(facemetrics(grid))
   faceM = facemass(cell)
   faceMJ = faceM * faceJ
   faceix⁻, faceix⁺ = faceindices(grid)
 
-  facedata = (faceix⁻, faceix⁺, faceMJ, facenormal) 
+  facedata = (faceix⁻, faceix⁺, faceMJ, facenormal)
 
   rhs! = function(dq, q)
     # volume term
@@ -61,9 +61,9 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
       dq[f⁻] .-= fMJ .* dot.(n, Ref(v)) .* (q[f⁺] .- q[f⁻]) ./ 2 ./ MJ[f⁻]
     end
   end
-  
+
   timeend = FT(2π)
- 
+
   # crude dt estimate
   cfl = 1 // 10
   dx = Base.step(vert1d)
@@ -86,14 +86,14 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
          FT(3134564353537 // 4481467310338),
          FT(2277821191437 // 14882151754819),
         )
-  
+
   if outputvtk
     mkpath(vtkdir)
     pvd = paraview_collection(joinpath(vtkdir, "timesteps"))
   end
 
   do_output = function(step, time, q)
-    if outputvtk && step % ceil(Int, timeend / 100 / dt) == 0 
+    if outputvtk && step % ceil(Int, timeend / 100 / dt) == 0
       filename = "step$(lpad(step, 6, '0'))"
       vtkfile = vtk_grid(joinpath(vtkdir, filename), grid)
       P = Bennu.toequallyspaced(cell)
@@ -102,19 +102,19 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
       pvd[time] = vtkfile
     end
   end
-  
+
   # initialize state
   q = solution.(points(grid), FT(0))
 
   # storage for rhs
   dq = similar(q)
   dq .= 0
-  
+
   # initial output
   step = 0
   time = FT(0)
   do_output(step, time, q)
- 
+
   ### time integration
   for step = 1:numberofsteps
     if time + dt > timeend
@@ -132,7 +132,7 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
   # final output
   do_output(numberofsteps, timeend, q)
   outputvtk && vtk_save(pvd)
- 
+
   # compute error
   qexact = solution.(points(grid), timeend)
   errf = sqrt(sum(MJ .* (q .- qexact) .^ 2))
@@ -144,15 +144,15 @@ let
 
   # run on the GPU if possible
   A = CUDA.has_cuda_gpu() ? CuArray : Array
-  
+
   @info """Configuration:
-  precision        = $FT 
+  precision        = $FT
   polynomial order = $N
   array type       = $A
   """
 
   # visualize solution of advected gaussian
-  
+
   K = 16
   vtkdir = "vtk_advection_K$(K)x$(K)"
   @info "Starting Gaussian advection with ($K, $K) elements"
@@ -160,7 +160,7 @@ let
   @info "Finished, vtk output written to $vtkdir"
 
   # run convergence study using a simple sine field
-  
+
   @info "Starting convergence study"
   numlevels = 5
   err = zeros(FT, numlevels)
