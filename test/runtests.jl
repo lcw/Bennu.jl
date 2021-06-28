@@ -49,10 +49,11 @@ include("tuples.jl")
                 example_project = Pkg.Types.projectfile_path(example_dir)
                 tmp_project = Pkg.Types.projectfile_path(tmp_dir)
                 cp(example_project, tmp_project)
+                @show readdir()
 
                 for script in filter!(s->endswith(s, ".jl"),
                                       readdir(example_dir, join=true))
-                    cmd = `$julia --project=$tmp_project -e "import Pkg; Pkg.develop(path=raw\"$base_dir\"); Pkg.resolve(); Pkg.instantiate(); include(raw\"$script\")"`
+                    cmd = `$julia --project=$tmp_project -e "import Pkg; Pkg.develop(path=raw\"$base_dir\"); Pkg.instantiate(); include(raw\"$script\")"`
                     @test success(pipeline(cmd, stderr=stderr, stdout=stdout))
                 end
             end
