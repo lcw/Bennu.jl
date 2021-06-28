@@ -22,9 +22,9 @@ export LobattoCell, NodalGrid, CartesianOrdering, HilbertOrdering
 export spectralderivative, spectralinterpolation, legendregauss,
        legendregausslobatto, partition, quantize,
        hilbertcode, hilbertindices, hilbertperm,
-       floattype, arraytype, points, mass, facemass, derivatives, degrees,
-       celltype, referencecell, vertices, connectivity, points, brickgrid,
-       toequallyspaced
+       floattype, arraytype, points, mass, facemass, derivatives,
+       derivatives_1d, degrees, celltype, referencecell, vertices,
+       connectivity, points, brickgrid, toequallyspaced
 
 export fieldarray
 

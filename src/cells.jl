@@ -107,6 +107,10 @@ points_1d(cell::LobattoCell) = cell.points_1d
 weights_1d(cell::LobattoCell) = cell.weights_1d
 points(cell::LobattoCell) = cell.points
 derivatives(cell::LobattoCell) = cell.derivatives
+function derivatives_1d(cell::LobattoCell)
+    N = ndims(cell)
+    ntuple(i -> cell.derivatives[i].args[N - i + 1], Val(N))
+end
 mass(cell::LobattoCell) = cell.mass
 facemass(cell::LobattoCell) = cell.facemass
 toequallyspaced(cell::LobattoCell) = cell.toequallyspaced
