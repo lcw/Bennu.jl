@@ -25,6 +25,11 @@
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T), zero(T)), 9)
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T), one(T)), 9)
+        D1d = derivatives_1d(cell)
+        @test length(D1d) == ndims(cell)
+        @test all(Array.(D1d) .==
+                      Matrix{T}.(spectralderivative.(first.(
+                          legendregausslobatto.(BigFloat, size(cell))))))
         @test number_of_faces(cell) == (1, 4, 4)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
         @test connectivity(cell) ==  adapt(A, (([1 4 7; 2 5 8; 3 6 9],),
@@ -51,6 +56,11 @@
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T),  zero(T), zero(T)), prod(s))
         @test Array(D[2] * points(cell)) ≈ fill(SVector(zero(T),  one(T), zero(T)), prod(s))
         @test Array(D[3] * points(cell)) ≈ fill(SVector(zero(T), zero(T),  one(T)), prod(s))
+        D1d = derivatives_1d(cell)
+        @test length(D1d) == ndims(cell)
+        @test all(Array.(D1d) .==
+                      Matrix{T}.(spectralderivative.(first.(
+                          legendregausslobatto.(BigFloat, size(cell))))))
         @test number_of_faces(cell) == (1, 6, 12, 8)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
         @test connectivity(cell)[1] == (adapt(A, reshape(collect(1:24),3,4,2)),)
@@ -83,6 +93,11 @@
         @test facemass(cell) isa Diagonal
         D = derivatives(cell)
         @test Array(D[1] * points(cell)) ≈ fill(SVector(one(T)), 5)
+        D1d = derivatives_1d(cell)
+        @test length(D1d) == ndims(cell)
+        @test all(Array.(D1d) .==
+                      Matrix{T}.(spectralderivative.(first.(
+                          legendregausslobatto.(BigFloat, size(cell))))))
         @test number_of_faces(cell) == (1, 2)
         @test number_of_faces(cell) == size.(Bennu.materializefaces(cell), 2)
         @test connectivity(cell) == adapt(A, (([1, 2, 3, 4, 5],), (1, 5)))
