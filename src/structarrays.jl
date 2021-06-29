@@ -92,13 +92,6 @@ Base.print_array(io::IO, X::GPUStructArray{<:Any,2}) where {T} =
 Base.print_array(io::IO, X::GPUStructArray{<:Any,<:Any}) =
     Base.show_nd(io, convert_to_cpu(X), Base.print_matrix, true)
 
-# These definitions allow `StructArray` and `StaticArrays.SArray` to play nicely
-# together.
-StructArrays.staticschema(::Type{SArray{S,T,N,L}}) where {S,T,N,L} = NTuple{L,T}
-StructArrays.createinstance(::Type{SArray{S,T,N,L}}, args...) where {S,T,N,L} =
-    SArray{S,T,N,L}(args...)
-StructArrays.component(s::SArray, i) = getindex(s, i)
-
 @kernel function fill_kernel!(A, x)
     I = @index(Global)
     @inbounds A[I] = x
