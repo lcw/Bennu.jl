@@ -49,7 +49,6 @@ include("tuples.jl")
                 example_project = Pkg.Types.projectfile_path(example_dir)
                 tmp_project = Pkg.Types.projectfile_path(tmp_dir)
                 cp(example_project, tmp_project)
-                @show readdir()
 
                 for script in filter!(s->endswith(s, ".jl"),
                                       readdir(example_dir, join=true))
