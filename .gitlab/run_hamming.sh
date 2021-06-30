@@ -13,6 +13,7 @@ echo "Available GPUs..."
 nvidia-smi
 
 echo "Julia GPU environment..."
+export JULIA_CUDA_USE_BINARYBUILDER=true
 env | grep JULIA
 env | grep CUDA
 
