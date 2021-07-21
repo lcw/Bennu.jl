@@ -87,6 +87,10 @@ function LobattoCell{T, A}(dims...) where {T, A}
     LobattoCell{T, A, Tuple{dims...}, N, typeof.(args[2:end])...}(args...)
 end
 
+function Base.similar(::LobattoCell{T, A}, dims...) where {T, A}
+    LobattoCell{T, A}(dims...)
+end
+
 function Adapt.adapt_structure(to,
                                cell::LobattoCell{T, A, S, N}) where {T, A, S, N}
     names = fieldnames(LobattoCell)
@@ -235,11 +239,13 @@ function materializemetrics(referencecell::LobattoLine, points)
     return (metrics, facemetrics)
 end
 
-function materializepoints(referencecell::LobattoQuad, vertices, connectivity)
+function materializepoints(referencecell::LobattoQuad,
+        vertices::AbstractArray{<:SVector{PDIM}}, connectivity) where PDIM
     T = floattype(referencecell)
     A = arraytype(referencecell)
     r = vec.(points_1d(referencecell))
-    p = fieldarray(undef, SVector{2, T}, A,
+
+    p = fieldarray(undef, SVector{PDIM, T}, A,
                    (size(referencecell)..., length(connectivity)))
 
     connectivity = vec(connectivity)

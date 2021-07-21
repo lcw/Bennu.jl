@@ -236,3 +236,168 @@ function brickgrid(warp::Function, referencecell::LobattoCell,
     return NodalGrid(warp, referencecell, vertices, connectivity;
                      faces=faces, boundaryfaces=boundaryfaces)
 end
+
+function cubespherewarp(point)
+    # Put the points in reverse magnitude order
+    p = sortperm(abs.(point))
+    point = point[p]
+
+    # Convert to angles
+    ξ = π * point[2] / 4point[3]
+    η = π * point[1] / 4point[3]
+
+    # Compute the ratios
+    y_x = tan(ξ)
+    z_x = tan(η)
+
+    # Compute the new points
+    x = point[3] / hypot(1, y_x, z_x)
+    y = x * y_x
+    z = x * z_x
+
+    # Compute the new points and unpermute
+    point = SVector(z, y, x)[sortperm(p)]
+
+    return point
+end
+
+function cubedshellconnectivity(referencecell::LobattoCell,
+                                R::Real,
+                                ncells::Integer;
+                                ordering::AbstractOrdering=CartesianOrdering())
+
+    if ndims(referencecell) != 2
+        throw(ArgumentError("cubed sphere shell requires 2-D reference cell"))
+    end
+
+    # Get the array and float type from the reference cell
+    A = arraytype(referencecell)
+    T = floattype(referencecell)
+
+    # Create the 1-D grid along an edge of the cube
+    coord1d = adapt(A, collect(range(-T(R), length = ncells + 1, stop = R)))
+
+    # Create the vertices and cell connectivity on each cube face
+    vertices = similar(coord1d, SVector{3, T}, (ncells+1, ncells+1, 6))
+
+    # face 1: ξ1 = -1
+    @tullio vertices[i, j, 1] = SVector(-R, coord1d[i], coord1d[j])
+
+    # face 2: ξ1 =  1
+    @tullio vertices[i, j, 2] = SVector( R, -coord1d[i], coord1d[j])
+
+    # face 3: ξ2 = -1
+    @tullio vertices[i, j, 3] = SVector(-coord1d[i], -R, coord1d[j])
+
+    # face 4: ξ2 =  1
+    @tullio vertices[i, j, 4] = SVector(coord1d[i],  R, coord1d[j])
+
+    # face 5: ξ3 = -1
+    @tullio vertices[i, j, 5] = SVector(coord1d[i], coord1d[j], -R)
+
+    # face 6: ξ3 =  1
+    @tullio vertices[i, j, 6] = SVector(coord1d[i], -coord1d[j],  R)
+
+    # Create a connectivity map for each element
+    linear = adapt(A, collect(LinearIndices((ncells + 1, ncells + 1, 6))))
+    conn = similar(vertices, Int, (2, 2, ncells, ncells, 6))
+    @tullio conn[a, b, i, j, f] = linear[i + a - 1, j + b - 1, f]
+
+    # Remove the vertex references that are actually for duplicate points
+
+    # face 3/4, edge 1 -> face 2/1, edge 2
+    conn[1, :,   1, :, [3, 4]] .= conn[2, :, end, :, [2, 1]]
+    # face 3/4, edge 2 -> face 1/2, edge 2
+    conn[2, :, end, :, [3, 4]] .= conn[1, :,   1, :, [1, 2]]
+
+    # face 5, edge 1 -> face 1, edge 3
+    conn[1, :,   1, :, 5] .= conn[:,      1, :,        1, 1]
+    # face 5, edge 2 -> face 2, edge -3
+    conn[2, :, end, :, 5] .= conn[2:-1:1, 1, end:-1:1, 1, 2]
+    # face 5, edge 3 -> face 3, edge -3
+    conn[:, 1, :,   1, 5] .= conn[2:-1:1, 1, end:-1:1, 1, 3]
+    # face 5, edge 4 -> face 3, edge 3
+    conn[:, 2, :, end, 5] .= conn[:,      1, :,        1, 4]
+
+    # face 6, edge 1 -> face 1, edge 4
+    conn[1, :,   1, :, 6] .= conn[2:-1:1, 2, end:-1:1, end, 1]
+    # face 6, edge 2 -> face 2, edge -4
+    conn[2, :, end, :, 6] .= conn[:,      2, :,        end, 2]
+    # face 6, edge 3 -> face 3, edge 4
+    conn[:, 1, :,   1, 6] .= conn[:,      2, :,        end, 4]
+    # face 6, edge 4 -> face 3, edge -4
+    conn[:, 2, :, end, 6] .= conn[2:-1:1, 2, end:-1:1, end, 3]
+
+    connectivity = similar(vertices, NTuple{4, Int}, (ncells, ncells, 6))
+
+    @tullio connectivity[i, j, f] = (
+                                     conn[1, 1, i, j, f],
+                                     conn[2, 1, i, j, f],
+                                     conn[1, 2, i, j, f],
+                                     conn[2, 2, i, j, f],
+                                    )
+
+    if ordering isa CartesianOrdering
+    else
+        throw(ArgumentError("Unsuported ordering $ordering."))
+    end
+
+    return (vertices = vertices, connectivity = connectivity)
+end
+
+function cubedspheregrid(referencecell::LobattoCell,
+                         vert_coordinate::AbstractArray,
+                         ncells_h_panel::Integer;
+                         horz_ordering::AbstractOrdering=CartesianOrdering())
+
+    if ndims(referencecell) != 3
+        throw(ArgumentError("cubed sphere shell requires 3-D reference cell"))
+    end
+
+    if length(vert_coordinate) < 2
+        throw(ArgumentError("Vertical coordinate needs to be of atleast length 2."))
+    end
+
+    Nq = size(referencecell)
+    if Nq[1] != Nq[2]
+        throw(ArgumentError("`referencecell` should have first two dims the same"))
+    end
+
+    h_refcell = similar(referencecell, Nq[1], Nq[2])
+
+    # Get the array and float type from the reference cell
+    A = arraytype(referencecell)
+    T = floattype(referencecell)
+
+    # Create a unit shell
+    (h_vert, h_conn) = cubedshellconnectivity(h_refcell,
+                                              1,
+                                              ncells_h_panel;
+                                              ordering = horz_ordering)
+
+    # Blow out to a stacked cubed shell
+    vert_coordinate = adapt(A, collect(vert_coordinate))
+    vertices = similar(
+                       h_vert,
+                       size(h_vert)...,
+                       length(vert_coordinate),
+                       )
+    @tullio vertices[x, y, f, z] = h_vert[x, y, f] * vert_coordinate[z]
+
+    # Add the vertical connectivity
+    connectivity = similar(
+                           h_conn,
+                           NTuple{8, Int},
+                           length(vert_coordinate) - 1,
+                           size(h_conn)...,
+                          )
+    offset = prod(size(h_vert))
+    @tullio connectivity[z, x, y, f] = begin
+        c = h_conn[x, y, f]
+        l = (z - 1) * offset .+ c
+        u = z * offset .+ c
+        (l..., u...)
+    end
+
+    return NodalGrid(cubespherewarp, referencecell, vertices, connectivity)
+end
