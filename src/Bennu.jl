@@ -24,7 +24,8 @@ export spectralderivative, spectralinterpolation, legendregauss,
        hilbertcode, hilbertindices, hilbertperm,
        floattype, arraytype, points, mass, facemass, derivatives,
        derivatives_1d, degrees, celltype, referencecell, vertices,
-       connectivity, points, brickgrid, toequallyspaced
+       connectivity, points, brickgrid, toequallyspaced,
+       cubedspheregrid
 
 export fieldarray
 
