@@ -12,10 +12,10 @@ Base.ndims(cell::AbstractCell) = Base.ndims(typeof(cell))
 Base.size(cell::AbstractCell) = Base.size(typeof(cell))
 Base.length(cell::AbstractCell) = Base.length(typeof(cell))
 
-function lobattooperators_1d(::Type{T}, M) where {T}
+function lobattooperators_1d(::Type{T}, M, Meq=M) where {T}
     points, weights  = legendregausslobatto(BigFloat, M)
     derivative = spectralderivative(points)
-    equallyspacedpoints = range(-one(BigFloat), stop=one(BigFloat), length=M)
+    equallyspacedpoints = range(-one(BigFloat), stop=one(BigFloat), length=Meq)
     toequallyspaced = spectralinterpolation(points, equallyspacedpoints)
 
     return map(Array{T}, (points=points, weights=weights, derivative=derivative,
@@ -39,7 +39,8 @@ function LobattoCell{T, A}(dims...) where {T, A}
         oall = adapt(A, lobattooperators_1d(T, first(dims)))
         o = ntuple(i->oall, N)
     else
-        o = ntuple(i->adapt(A, lobattooperators_1d(T, dims[i])), N)
+        Meq = maximum(dims)
+        o = ntuple(i->adapt(A, lobattooperators_1d(T, dims[i], Meq)), N)
     end
 
     points_1d = ntuple(N) do i
@@ -127,7 +128,7 @@ celltype_vtk(::LobattoQuad) = VTKCellTypes.VTK_LAGRANGE_QUADRILATERAL
 celltype_vtk(::LobattoHex)  = VTKCellTypes.VTK_LAGRANGE_HEXAHEDRON
 
 function connectivity_vtk(cell::LobattoLine)
-    L = LinearIndices(size(cell))
+    L = LinearIndices(ntuple(_->maximum(size(cell)), 1))
     return [
             L[1],      # corners
             L[end],
@@ -136,7 +137,7 @@ function connectivity_vtk(cell::LobattoLine)
 end
 
 function connectivity_vtk(cell::LobattoQuad)
-    L = LinearIndices(size(cell))
+    L = LinearIndices(ntuple(_->maximum(size(cell)), 2))
     return [
             L[1,     1], # corners
             L[end,   1],
@@ -151,7 +152,7 @@ function connectivity_vtk(cell::LobattoQuad)
 end
 
 function connectivity_vtk(cell::LobattoHex)
-    L = LinearIndices(size(cell))
+    L = LinearIndices(ntuple(_->maximum(size(cell)), 3))
     return [
             L[  1,   1,   1], # corners
             L[end,   1,   1],
