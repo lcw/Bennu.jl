@@ -105,3 +105,77 @@
                                   0  0  0  0  0  0  0  0
                                   0  0  0  0  0  0  0  0]
 end
+
+@testset "cubedsphere" begin
+    TAs = ((Float64,  Array), (Float32,  Array), (BigFloat, Array))
+    if CUDA.has_cuda_gpu()
+        TAs = (TAs..., (Float32, CuArray))
+    end
+
+    for (T, A) in TAs
+        cell = LobattoCell{T, A}(3, 3, 4)
+        vert_coord = one(T):1//2:4one(T)
+        ncells_h_panel = 2
+
+        grid = cubedspheregrid(cell, vert_coord, ncells_h_panel)
+
+        # Check the first level connectivity
+        h_offset = 6 * (ncells_h_panel + 1)^2
+
+        connectivity = adapt(Array, grid.connectivity)
+        @test connectivity[1, 1, 1, 1][1:4] == connectivity[1, 1, 1, 1][5:8] .- h_offset == (1, 2, 4, 5)
+        @test connectivity[1, 2, 1, 1][1:4] == connectivity[1, 2, 1, 1][5:8] .- h_offset == (2, 3, 5, 6)
+        @test connectivity[1, 1, 2, 1][1:4] == connectivity[1, 1, 2, 1][5:8] .- h_offset == (4, 5, 7, 8)
+        @test connectivity[1, 2, 2, 1][1:4] == connectivity[1, 2, 2, 1][5:8] .- h_offset == (5, 6, 8, 9)
+
+        @test connectivity[1, 1, 1, 2][1:4] == connectivity[1, 1, 1, 2][5:8] .- h_offset == (10, 11, 13, 14)
+        @test connectivity[1, 2, 1, 2][1:4] == connectivity[1, 2, 1, 2][5:8] .- h_offset == (11, 12, 14, 15)
+        @test connectivity[1, 1, 2, 2][1:4] == connectivity[1, 1, 2, 2][5:8] .- h_offset == (13, 14, 16, 17)
+        @test connectivity[1, 2, 2, 2][1:4] == connectivity[1, 2, 2, 2][5:8] .- h_offset == (14, 15, 17, 18)
+
+        @test connectivity[1, 1, 1, 3][1:4] == connectivity[1, 1, 1, 3][5:8] .- h_offset == (12, 20, 15, 23)
+        @test connectivity[1, 2, 1, 3][1:4] == connectivity[1, 2, 1, 3][5:8] .- h_offset == (20, 1, 23, 4)
+        @test connectivity[1, 1, 2, 3][1:4] == connectivity[1, 1, 2, 3][5:8] .- h_offset == (15, 23, 18, 26)
+        @test connectivity[1, 2, 2, 3][1:4] == connectivity[1, 2, 2, 3][5:8] .- h_offset == (23, 4, 26, 7)
+
+        @test connectivity[1, 1, 1, 4][1:4] == connectivity[1, 1, 1, 4][5:8] .- h_offset == (3, 29, 6, 32)
+        @test connectivity[1, 2, 1, 4][1:4] == connectivity[1, 2, 1, 4][5:8] .- h_offset == (29, 10, 32, 13)
+        @test connectivity[1, 1, 2, 4][1:4] == connectivity[1, 1, 2, 4][5:8] .- h_offset == (6, 32, 9, 35)
+        @test connectivity[1, 2, 2, 4][1:4] == connectivity[1, 2, 2, 4][5:8] .- h_offset == (32, 13, 35, 16)
+
+        @test connectivity[1, 1, 1, 5][1:4] == connectivity[1, 1, 1, 5][5:8] .- h_offset == (1, 20, 2, 41)
+        @test connectivity[1, 2, 1, 5][1:4] == connectivity[1, 2, 1, 5][5:8] .- h_offset == (20, 12, 41, 11)
+        @test connectivity[1, 1, 2, 5][1:4] == connectivity[1, 1, 2, 5][5:8] .- h_offset == (2, 41, 3, 29)
+        @test connectivity[1, 2, 2, 5][1:4] == connectivity[1, 2, 2, 5][5:8] .- h_offset == (41, 11, 29, 10)
+
+        @test connectivity[1, 1, 1, 6][1:4] == connectivity[1, 1, 1, 6][5:8] .- h_offset == (9, 35, 8, 50)
+        @test connectivity[1, 2, 1, 6][1:4] == connectivity[1, 2, 1, 6][5:8] .- h_offset == (35, 16, 50, 17)
+        @test connectivity[1, 1, 2, 6][1:4] == connectivity[1, 1, 2, 6][5:8] .- h_offset == (8, 50, 7, 26)
+        @test connectivity[1, 2, 2, 6][1:4] == connectivity[1, 2, 2, 6][5:8] .- h_offset == (50, 17, 26, 18)
+
+        @test connectivity[1, 1, 1, 1][1:4] == connectivity[1, 1, 1, 1][5:8] .- h_offset == (1, 2, 4, 5)
+        @test connectivity[1, 2, 1, 1][1:4] == connectivity[1, 2, 1, 1][5:8] .- h_offset == (2, 3, 5, 6)
+        @test connectivity[1, 1, 2, 1][1:4] == connectivity[1, 1, 2, 1][5:8] .- h_offset == (4, 5, 7, 8)
+        @test connectivity[1, 2, 2, 1][1:4] == connectivity[1, 2, 2, 1][5:8] .- h_offset == (5, 6, 8, 9)
+
+        @test connectivity[1, 1, 1, 2][1:4] == connectivity[1, 1, 1, 2][5:8] .- h_offset == (10, 11, 13, 14)
+        @test connectivity[1, 2, 1, 2][1:4] == connectivity[1, 2, 1, 2][5:8] .- h_offset == (11, 12, 14, 15)
+        @test connectivity[1, 1, 2, 2][1:4] == connectivity[1, 1, 2, 2][5:8] .- h_offset == (13, 14, 16, 17)
+        @test connectivity[1, 2, 2, 2][1:4] == connectivity[1, 2, 2, 2][5:8] .- h_offset == (14, 15, 17, 18)
+
+        # Check the higher levels
+        for z = 1:length(vert_coord) - 2
+            for (a, b) in zip(connectivity[z, :, :, :],  connectivity[z + 1, :, :, :])
+                @test a .+ h_offset == b
+            end
+        end
+
+        # Check the vertices are at the right levels
+        vertices = adapt(Array, grid.vertices)
+        for z = 1:length(vert_coord)
+            for p in vertices[:, :, :, z]
+                @test norm(Bennu.cubespherewarp(p)) ≈ vert_coord[z]
+            end
+        end
+    end
+end
