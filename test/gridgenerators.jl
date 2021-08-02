@@ -106,6 +106,77 @@
                                   0  0  0  0  0  0  0  0]
 end
 
+@testset "cubedshell" begin
+    TAs = ((Float64,  Array), (Float32,  Array), (BigFloat, Array))
+    if CUDA.has_cuda_gpu()
+        TAs = (TAs..., (Float32, CuArray))
+    end
+
+    for (T, A) in TAs
+        cell = LobattoCell{T, A}(3, 3)
+        ncells_h_panel = 2
+
+        (vert, conn) = Bennu.cubedshellconnectivity(cell, 1, ncells_h_panel);
+
+        vert = adapt(Array, vert)
+        conn = adapt(Array, conn)
+        f1 = [[-1,  1, -1],
+              [-1,  0, -1],
+              [-1,  1,  0],
+              [-1,  0,  0]]
+        f2 = [[ 1, -1, -1],
+              [ 1,  0, -1],
+              [ 1, -1,  0],
+              [ 1,  0,  0]]
+        f3 = [[-1, -1, -1],
+              [ 0, -1, -1],
+              [-1, -1,  0],
+              [ 0, -1,  0]]
+        f4 = [[ 1,  1, -1],
+              [ 0,  1, -1],
+              [ 1,  1,  0],
+              [ 0,  1,  0]]
+        f5 = [[-1,  1, -1],
+              [ 0,  1, -1],
+              [-1,  0, -1],
+              [ 0,  0, -1]]
+        f6 = [[-1, -1,  1],
+              [ 0, -1,  1],
+              [-1,  0,  1],
+              [ 0,  0,  1]]
+
+        @test vert[[conn[1, 1, 1]...]] == f1
+        @test vert[[conn[2, 1, 1]...]] == f1 .+ [[ 0, -1,  0]]
+        @test vert[[conn[1, 2, 1]...]] == f1 .+ [[ 0,  0,  1]]
+        @test vert[[conn[2, 2, 1]...]] == f1 .+ [[ 0, -1,  1]]
+
+        @test vert[[conn[1, 1, 2]...]] == f2
+        @test vert[[conn[2, 1, 2]...]] == f2 .+ [[ 0,  1,  0]]
+        @test vert[[conn[1, 2, 2]...]] == f2 .+ [[ 0,  0,  1]]
+        @test vert[[conn[2, 2, 2]...]] == f2 .+ [[ 0,  1,  1]]
+
+        @test vert[[conn[1, 1, 3]...]] == f3
+        @test vert[[conn[2, 1, 3]...]] == f3 .+ [[ 1,  0,  0]]
+        @test vert[[conn[1, 2, 3]...]] == f3 .+ [[ 0,  0,  1]]
+        @test vert[[conn[2, 2, 3]...]] == f3 .+ [[ 1,  0,  1]]
+
+        @test vert[[conn[1, 1, 4]...]] == f4
+        @test vert[[conn[2, 1, 4]...]] == f4 .+ [[-1,  0,  0]]
+        @test vert[[conn[1, 2, 4]...]] == f4 .+ [[ 0,  0,  1]]
+        @test vert[[conn[2, 2, 4]...]] == f4 .+ [[-1,  0,  1]]
+
+        @test vert[[conn[1, 1, 5]...]] == f5
+        @test vert[[conn[2, 1, 5]...]] == f5 .+ [[ 1,  0,  0]]
+        @test vert[[conn[1, 2, 5]...]] == f5 .+ [[ 0, -1,  0]]
+        @test vert[[conn[2, 2, 5]...]] == f5 .+ [[ 1, -1,  0]]
+
+        @test vert[[conn[1, 1, 6]...]] == f6
+        @test vert[[conn[2, 1, 6]...]] == f6 .+ [[ 1,  0,  0]]
+        @test vert[[conn[1, 2, 6]...]] == f6 .+ [[ 0,  1,  0]]
+        @test vert[[conn[2, 2, 6]...]] == f6 .+ [[ 1,  1,  0]]
+    end
+end
+
 @testset "cubedsphere" begin
     TAs = ((Float64,  Array), (Float32,  Array), (BigFloat, Array))
     if CUDA.has_cuda_gpu()
