@@ -281,22 +281,22 @@ function cubedshellconnectivity(referencecell::LobattoCell,
     vertices = similar(coord1d, SVector{3, T}, (ncells+1, ncells+1, 6))
 
     # face 1: ξ1 = -1
-    @tullio vertices[i, j, 1] = SVector(-R, coord1d[i], coord1d[j])
+    @tullio vertices[i, j, 1] = SVector(-R, -coord1d[i], +coord1d[j])
 
     # face 2: ξ1 =  1
-    @tullio vertices[i, j, 2] = SVector( R, -coord1d[i], coord1d[j])
+    @tullio vertices[i, j, 2] = SVector(+R, +coord1d[i], +coord1d[j])
 
     # face 3: ξ2 = -1
-    @tullio vertices[i, j, 3] = SVector(-coord1d[i], -R, coord1d[j])
+    @tullio vertices[i, j, 3] = SVector(+coord1d[i], -R, +coord1d[j])
 
     # face 4: ξ2 =  1
-    @tullio vertices[i, j, 4] = SVector(coord1d[i],  R, coord1d[j])
+    @tullio vertices[i, j, 4] = SVector(-coord1d[i], +R, +coord1d[j])
 
     # face 5: ξ3 = -1
-    @tullio vertices[i, j, 5] = SVector(coord1d[i], coord1d[j], -R)
+    @tullio vertices[i, j, 5] = SVector(+coord1d[i], -coord1d[j], -R)
 
     # face 6: ξ3 =  1
-    @tullio vertices[i, j, 6] = SVector(coord1d[i], -coord1d[j],  R)
+    @tullio vertices[i, j, 6] = SVector(+coord1d[i], +coord1d[j], +R)
 
     # Create a connectivity map for each element
     linear = adapt(A, collect(LinearIndices((ncells + 1, ncells + 1, 6))))
@@ -305,28 +305,28 @@ function cubedshellconnectivity(referencecell::LobattoCell,
 
     # Remove the vertex references that are actually for duplicate points
 
-    # face 3/4, edge 1 -> face 2/1, edge 2
-    conn[1, :,   1, :, [3, 4]] .= conn[2, :, end, :, [2, 1]]
-    # face 3/4, edge 2 -> face 1/2, edge 2
-    conn[2, :, end, :, [3, 4]] .= conn[1, :,   1, :, [1, 2]]
+    # face 3/4, edge 1 -> face 1/2, edge 2
+    conn[1, :,   1, :, [3, 4]] .= conn[2, :, end, :, [1, 2]]
+    # face 3/4, edge 2 -> face 2/1, edge 1
+    conn[2, :, end, :, [3, 4]] .= conn[1, :,   1, :, [2, 1]]
 
     # face 5, edge 1 -> face 1, edge 3
     conn[1, :,   1, :, 5] .= conn[:,      1, :,        1, 1]
     # face 5, edge 2 -> face 2, edge -3
     conn[2, :, end, :, 5] .= conn[2:-1:1, 1, end:-1:1, 1, 2]
     # face 5, edge 3 -> face 3, edge -3
-    conn[:, 1, :,   1, 5] .= conn[2:-1:1, 1, end:-1:1, 1, 3]
+    conn[:, 1, :,   1, 5] .= conn[2:-1:1, 1, end:-1:1, 1, 4]
     # face 5, edge 4 -> face 3, edge 3
-    conn[:, 2, :, end, 5] .= conn[:,      1, :,        1, 4]
+    conn[:, 2, :, end, 5] .= conn[:,      1, :,        1, 3]
 
-    # face 6, edge 1 -> face 1, edge 4
+    # face 6, edge 1 -> face 1, edge -4
     conn[1, :,   1, :, 6] .= conn[2:-1:1, 2, end:-1:1, end, 1]
-    # face 6, edge 2 -> face 2, edge -4
+    # face 6, edge 2 -> face 2, edge 4
     conn[2, :, end, :, 6] .= conn[:,      2, :,        end, 2]
     # face 6, edge 3 -> face 3, edge 4
-    conn[:, 1, :,   1, 6] .= conn[:,      2, :,        end, 4]
-    # face 6, edge 4 -> face 3, edge -4
-    conn[:, 2, :, end, 6] .= conn[2:-1:1, 2, end:-1:1, end, 3]
+    conn[:, 1, :,   1, 6] .= conn[:,      2, :,        end, 3]
+    # face 6, edge 4 -> face 4, edge -4
+    conn[:, 2, :, end, 6] .= conn[2:-1:1, 2, end:-1:1, end, 4]
 
     connectivity = similar(vertices, NTuple{4, Int}, (ncells, ncells, 6))
 
