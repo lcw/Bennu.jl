@@ -5,12 +5,15 @@ arraytype(::Type{<:AbstractCell{T, A}}) where {T, A} = A
 Base.ndims(::Type{<:AbstractCell{T, A, S, N}}) where {T, A, S, N} = N
 Base.size(::Type{<:AbstractCell{T, A, S}}) where {T, A, S} = size_to_tuple(S)
 Base.length(::Type{<:AbstractCell{T, A, S}}) where {T, A, S} = tuple_prod(S)
+Base.strides(::Type{<:AbstractCell{T, A, S}}) where {T, A, S} =
+  Base.size_to_strides(1, size_to_tuple(S)...)
 
 floattype(cell::AbstractCell) = floattype(typeof(cell))
 arraytype(cell::AbstractCell) = arraytype(typeof(cell))
 Base.ndims(cell::AbstractCell) = Base.ndims(typeof(cell))
 Base.size(cell::AbstractCell) = Base.size(typeof(cell))
 Base.length(cell::AbstractCell) = Base.length(typeof(cell))
+Base.strides(cell::AbstractCell) = Base.strides(typeof(cell))
 
 function lobattooperators_1d(::Type{T}, M) where {T}
     points, weights  = legendregausslobatto(BigFloat, M)
