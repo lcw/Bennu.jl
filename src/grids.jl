@@ -276,3 +276,44 @@ function faceviews(referencecell, A::AbstractMatrix)
         reshape(view(A, (1+offsets[f]):offsets[f+1], :), facesizes[f]..., :)
     end
 end
+
+function min_node_distance(grid::NodalGrid; dims = 1:ndims(grid))
+    @assert maximum(dims) <= ndims(grid)
+
+    A = arraytype(grid)
+    T = floattype(grid)
+    cell = referencecell(grid)
+
+    min_neighbour_distance = similar(points(grid), T)
+
+    Np = length(cell)
+    event = min_neighbour_distance_kernel(device(A), 256)(
+        min_neighbour_distance, points(grid), Val(strides(cell)), Val(Np), Val(dims);
+        ndrange = length(grid) * length(cell))
+    wait(event)
+
+    minimum(min_neighbour_distance)
+end
+
+@kernel function min_neighbour_distance_kernel(min_neighbour_distance, points,
+                                               ::Val{S}, ::Val{Np}, ::Val{dims}) where {S, Np, dims}
+    I = @index(Global, Linear)
+
+    @inbounds begin
+        e = (I - 1) ÷ Np + 1
+        ijk = (I - 1) % Np + 1
+
+        md = typemax(eltype(min_neighbour_distance))
+        x⃗ = points[ijk, e]
+        for d in dims
+            for m in (-1, 1)
+                ijknb = ijk + S[d] * m
+                    if 1 <= ijknb <= Np
+                        x⃗nb = points[ijknb, e]
+                        md = min(norm(x⃗ - x⃗nb), md)
+                    end
+            end
+        end
+        min_neighbour_distance[ijk, e] = md
+    end
+end

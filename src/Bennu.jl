@@ -25,7 +25,7 @@ export spectralderivative, spectralinterpolation, legendregauss,
        floattype, arraytype, points, mass, facemass, derivatives,
        derivatives_1d, degrees, celltype, referencecell, vertices,
        connectivity, points, brickgrid, toequallyspaced,
-       cubedspheregrid
+       cubedspheregrid, min_node_distance
 
 export fieldarray
 

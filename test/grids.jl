@@ -175,5 +175,67 @@
             @test boundaryfaces(grid) == adapt(A, [1  1
                                                    0  0])
         end
+
+        @testset "min_node_distance" begin
+            Kh = 10
+            Kv = 4
+            Nqs = (((5, 5), (5, 4), (3, 4)),
+                   ((5, 5, 5), (3, 4, 5), (5, 4, 3), (5, 3, 4)))
+
+            for dim in (2, 3)
+                for Nq in Nqs[dim - 1]
+                    if dim == 2
+                        brickrange = (
+                          range(T(0); length = Kh + 1, stop = T(1)),
+                          range(T(1); length = Kv + 1, stop = T(2)),
+                        )
+                    elseif dim == 3
+                        brickrange = (
+                          range(T(0); length = Kh + 1, stop = T(1)),
+                          range(T(0); length = Kh + 1, stop = T(1)),
+                          range(T(1); length = Kv + 1, stop = T(2)),
+                        )
+                    end
+
+                    if dim == 2
+                      warpfun = function(x⃗)
+                        FT = eltype(x⃗)
+                        ξ1, ξ2 = x⃗
+                        ξ1 ≥ FT(1 / 2) &&
+                            (ξ1 = FT(1 / 2) + 2 * (ξ1 - FT(1 / 2)))
+                        ξ2 ≥ FT(3 / 2) &&
+                            (ξ2 = FT(3 / 2) + 2 * (ξ2 - FT(3 / 2)))
+                        SVector(ξ1, ξ2)
+                      end
+                    else
+                      warpfun = function(x⃗)
+                        FT = eltype(x⃗)
+                        ξ1, ξ2, ξ3 = x⃗
+                        ξ1 ≥ FT(1 / 2) &&
+                            (ξ1 = FT(1 / 2) + 2 * (ξ1 - FT(1 / 2)))
+                        ξ2 ≥ FT(1 / 2) &&
+                            (ξ2 = FT(1 / 2) + 2 * (ξ2 - FT(1 / 2)))
+                        ξ3 ≥ FT(3 / 2) &&
+                            (ξ3 = FT(3 / 2) + 2 * (ξ3 - FT(3 / 2)))
+                        SVector(ξ1, ξ2, ξ3)
+                      end
+                    end
+
+                    cell = LobattoCell{T, A}(Nq...)
+                    grid = brickgrid(warpfun, cell, brickrange;
+                                     periodic=ntuple(_ -> true, dim))
+
+                    ξ = Array.(Bennu.points_1d(cell))
+                    Δξ = ntuple(d -> ξ[d][2] - ξ[d][1], dim)
+
+                    hmnd = minimum(Δξ[1:(dim - 1)]) / (2Kh)
+                    vmnd = Δξ[end] / (2Kv)
+
+                    @test hmnd ≈ min_node_distance(grid)
+                    @test vmnd ≈ min_node_distance(grid, dims = (dim,))
+                    @test hmnd ≈ min_node_distance(grid, dims = 1:(dim-1))
+                end
+            end
+        end
     end
 end
