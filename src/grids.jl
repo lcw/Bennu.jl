@@ -3,7 +3,7 @@ abstract type AbstractGrid{C <: AbstractCell, N <: Tuple} end
 floattype(::Type{<:AbstractGrid{C}}) where {C} = floattype(C)
 arraytype(::Type{<:AbstractGrid{C}}) where {C} = arraytype(C)
 celltype(::Type{<:AbstractGrid{C}}) where {C} = C
-Base.ndims(::Type{<:AbstractGrid{C, N}}) where {C, N} = tuple_length(N)
+Base.ndims(::Type{<:AbstractGrid{C}}) where {C} = ndims(C)
 Base.size(::Type{<:AbstractGrid{C, N}}) where {C, N} = size_to_tuple(N)
 Base.length(::Type{<:AbstractGrid{C, N}}) where {C, N} = tuple_prod(N)
 

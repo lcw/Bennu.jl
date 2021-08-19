@@ -21,14 +21,14 @@
         @test floattype(grid) == T
         @test arraytype(grid) <: A
         @test celltype(grid) == typeof(cell)
-        @test Base.ndims(grid) == Base.ndims(conn)
+        @test Base.ndims(grid) == Base.ndims(cell)
         @test size(grid) == size(conn)
         @test length(grid) == length(conn)
 
         @test floattype(typeof(grid)) == T
         @test arraytype(typeof(grid)) <: A
         @test celltype(typeof(grid)) == typeof(cell)
-        @test Base.ndims(typeof(grid)) == Base.ndims(conn)
+        @test Base.ndims(typeof(grid)) == Base.ndims(cell)
         @test size(typeof(grid)) == size(conn)
         @test length(typeof(grid)) == length(conn)
 
