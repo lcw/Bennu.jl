@@ -35,6 +35,13 @@ struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, Q, F, G, H, B} <: Abstr
     boundaryfaces::B
 end
 
+function Adapt.adapt_structure(to, grid::NodalGrid{C1, N}) where {C1, N}
+    names = fieldnames(NodalGrid)
+    args = ntuple(j->adapt(to, getfield(grid, names[j])), length(names))
+    C2 = typeof(args[1])
+    NodalGrid{C2, N, typeof.(args[2:end])...}(args...)
+end
+
 function NodalGrid(warp::Function, referencecell, vertices, connectivity;
                    faces=nothing, boundaryfaces=nothing)
     C = typeof(referencecell)

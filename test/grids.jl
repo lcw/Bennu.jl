@@ -24,6 +24,7 @@
         @test Base.ndims(grid) == Base.ndims(cell)
         @test size(grid) == size(conn)
         @test length(grid) == length(conn)
+        @test celltype(adapt(Array, grid)) <: LobattoCell{T, Array}
 
         @test floattype(typeof(grid)) == T
         @test arraytype(typeof(grid)) <: A
