@@ -33,6 +33,7 @@ struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, Q, F, G, H, B} <: Abstr
     faceindices::G
     facemetrics::H
     boundaryfaces::B
+    type::Symbol
 end
 
 function Adapt.adapt_structure(to, grid::NodalGrid{C1, N}) where {C1, N}
@@ -42,7 +43,7 @@ function Adapt.adapt_structure(to, grid::NodalGrid{C1, N}) where {C1, N}
     NodalGrid{C2, N, typeof.(args[2:end])...}(args...)
 end
 
-function NodalGrid(warp::Function, referencecell, vertices, connectivity;
+function NodalGrid(warp::Function, referencecell, vertices, connectivity, type;
                    faces=nothing, boundaryfaces=nothing)
     C = typeof(referencecell)
     N = size(connectivity)
@@ -74,12 +75,12 @@ function NodalGrid(warp::Function, referencecell, vertices, connectivity;
     return NodalGrid{C, Tuple{N...}, types...}(referencecell, vertices,
                                                connectivity, points, metrics,
                                                faces, faceindices, facemetrics,
-                                               boundaryfaces)
+                                               boundaryfaces, type)
 end
 
-function NodalGrid(referencecell, vertices, connectivity;
+function NodalGrid(referencecell, vertices, connectivity, type;
                    faces=nothing, boundaryfaces=nothing)
-    return NodalGrid(identity, referencecell, vertices, connectivity;
+    return NodalGrid(identity, referencecell, vertices, connectivity, type;
                      faces=faces, boundaryfaces=boundaryfaces)
 end
 
