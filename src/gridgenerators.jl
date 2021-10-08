@@ -233,7 +233,7 @@ function brickgrid(warp::Function, referencecell::LobattoCell,
         return S
     end
 
-    return NodalGrid(warp, referencecell, vertices, connectivity;
+    return NodalGrid(warp, referencecell, vertices, connectivity, :brick;
                      faces=faces, boundaryfaces=boundaryfaces)
 end
 
@@ -399,5 +399,5 @@ function cubedspheregrid(referencecell::LobattoCell,
         (l..., u...)
     end
 
-    return NodalGrid(cubespherewarp, referencecell, vertices, connectivity)
+    return NodalGrid(cubespherewarp, referencecell, vertices, connectivity, :cubedsphere)
 end
