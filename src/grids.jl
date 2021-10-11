@@ -40,21 +40,23 @@ function Adapt.adapt_structure(to, grid::NodalGrid{C1, N}) where {C1, N}
     names = fieldnames(NodalGrid)
     args = ntuple(j->adapt(to, getfield(grid, names[j])), length(names))
     C2 = typeof(args[1])
-    NodalGrid{C2, N, typeof.(args[2:end])...}(args...)
+    NodalGrid{C2, N, typeof.(args[2:end-1])...}(args...)
 end
 
-function NodalGrid(warp::Function, referencecell, vertices, connectivity, type;
+function NodalGrid(warp::Function, referencecell, vertices, connectivity, type=:unknown;
                    faces=nothing, boundaryfaces=nothing)
     C = typeof(referencecell)
     N = size(connectivity)
     V = typeof(vertices)
     Y = typeof(connectivity)
 
+    unwarpedbrick = warp === identity && type === :brick
+
     points = materializepoints(referencecell, vertices, connectivity)
     points = warp.(points)
     P = typeof(points)
 
-    metrics, facemetrics = materializemetrics(referencecell, points)
+    metrics, facemetrics = materializemetrics(referencecell, points, unwarpedbrick)
     Q = typeof(metrics)
     H = typeof(facemetrics)
 
@@ -78,7 +80,7 @@ function NodalGrid(warp::Function, referencecell, vertices, connectivity, type;
                                                boundaryfaces, type)
 end
 
-function NodalGrid(referencecell, vertices, connectivity, type;
+function NodalGrid(referencecell, vertices, connectivity, type=:unknown;
                    faces=nothing, boundaryfaces=nothing)
     return NodalGrid(identity, referencecell, vertices, connectivity, type;
                      faces=faces, boundaryfaces=boundaryfaces)
