@@ -207,5 +207,114 @@
             @test norm((D₁*(J .* g.:7) + D₂*(J .* g.:8) + D₃*(J .* g.:9)),
                        Inf) < 100*eps(T)
         end
+
+        @testset "1D perfect uniform brickgrid" begin
+            cell = LobattoCell{T, A}(4)
+            xrange = range(-T(1000), stop = T(1000), length = 21)
+            grid = brickgrid(cell, (xrange,))
+
+            p = adapt(Array, points(grid))
+            x₁ = only(components(p))
+
+            @test all(x₁ .+ reverse(x₁, dims = (1, 2)) .== 0)
+
+            g, J = adapt(Array, components(metrics(grid)))
+
+            @test all(J .== step(xrange) / 2)
+            @test all(g.:1 .== 2 / step(xrange))
+        end
+
+        @testset "2D perfect uniform brickgrid" begin
+            cell = LobattoCell{T, A}(4, 5)
+            xrange = range(-T(1000), stop = T(1000), length = 21)
+            yrange = range(-T(2000), stop = T(2000), length = 11)
+            grid = brickgrid(cell, (xrange, yrange),
+                             ordering = CartesianOrdering())
+
+            p = adapt(Array, points(grid))
+            p = reshape(p, size(cell)..., size(grid)...)
+            x₁, x₂ = components(p)
+
+            @test all(x₁ .+ reverse(x₁, dims = (1, 3)) .== 0)
+            @test all(x₂ .- reverse(x₂, dims = (1, 3)) .== 0)
+            @test all(x₁ .- reverse(x₁, dims = (2, 4)) .== 0)
+            @test all(x₂ .+ reverse(x₂, dims = (2, 4)) .== 0)
+
+            g, J = adapt(Array, components(metrics(grid)))
+
+            @test all(J .== step(xrange) * step(yrange) / 4)
+            @test all(g.:1 .== 2 / step(xrange))
+            @test all(g.:2 .== 0)
+            @test all(g.:3 .== 0)
+            @test all(g.:4 .== 2 / step(yrange))
+
+            n, sJ = adapt(Array, components(facemetrics(grid)))
+            n₁, n₂, n₃, n₄ = faceviews(cell, n)
+            @test all(n₁ .== Ref(SVector(-1, 0)))
+            @test all(n₂ .== Ref(SVector(1, 0)))
+            @test all(n₃ .== Ref(SVector(0, -1)))
+            @test all(n₄ .== Ref(SVector(0, 1)))
+
+            sJ₁, sJ₂, sJ₃, sJ₄ = faceviews(cell, sJ)
+            @test all(sJ₁ .== step(yrange) / 2)
+            @test all(sJ₂ .== step(yrange) / 2)
+            @test all(sJ₃ .== step(xrange) / 2)
+            @test all(sJ₄ .== step(xrange) / 2)
+        end
+
+        @testset "3D perfect uniform brickgrid" begin
+            cell = LobattoCell{T, A}(4, 5, 6)
+            xrange = range(-T(1000), stop = T(1000), length = 21)
+            yrange = range(-T(2000), stop = T(2000), length = 11)
+            zrange = range(-T(3000), stop = T(3000), length = 6)
+            grid = brickgrid(cell, (xrange, yrange, zrange),
+                             ordering = CartesianOrdering())
+
+            p = adapt(Array, points(grid))
+            p = reshape(p, size(cell)..., size(grid)...)
+            x₁, x₂, x₃ = components(p)
+
+            @test all(x₁ .+ reverse(x₁, dims = (1, 4)) .== 0)
+            @test all(x₂ .- reverse(x₂, dims = (1, 4)) .== 0)
+            @test all(x₃ .- reverse(x₃, dims = (1, 4)) .== 0)
+
+            @test all(x₁ .- reverse(x₁, dims = (2, 5)) .== 0)
+            @test all(x₂ .+ reverse(x₂, dims = (2, 5)) .== 0)
+            @test all(x₃ .- reverse(x₃, dims = (2, 5)) .== 0)
+
+            @test all(x₁ .- reverse(x₁, dims = (3, 6)) .== 0)
+            @test all(x₂ .- reverse(x₂, dims = (3, 6)) .== 0)
+            @test all(x₃ .+ reverse(x₃, dims = (3, 6)) .== 0)
+
+            g, J = adapt(Array, components(metrics(grid)))
+
+            @test all(J .== step(xrange) * step(yrange) * step(zrange) / 8)
+            @test all(g.:1 .== 2 / step(xrange))
+            @test all(g.:2 .== 0)
+            @test all(g.:3 .== 0)
+            @test all(g.:4 .== 0)
+            @test all(g.:5 .== 2 / step(yrange))
+            @test all(g.:6 .== 0)
+            @test all(g.:7 .== 0)
+            @test all(g.:8 .== 0)
+            @test all(g.:9 .== 2 / step(zrange))
+
+            n, sJ = adapt(Array, components(facemetrics(grid)))
+            n₁, n₂, n₃, n₄, n₅, n₆ = faceviews(cell, n)
+            @test all(n₁ .== Ref(SVector(-1, 0, 0)))
+            @test all(n₂ .== Ref(SVector(1, 0, 0)))
+            @test all(n₃ .== Ref(SVector(0, -1, 0)))
+            @test all(n₄ .== Ref(SVector(0, 1, 0)))
+            @test all(n₅ .== Ref(SVector(0, 0, -1)))
+            @test all(n₆ .== Ref(SVector(0, 0, 1)))
+
+            sJ₁, sJ₂, sJ₃, sJ₄, sJ₅, sJ₆ = faceviews(cell, sJ)
+            @test all(sJ₁ .== step(yrange) * step(zrange) / 4)
+            @test all(sJ₂ .== step(yrange) * step(zrange) / 4)
+            @test all(sJ₃ .== step(xrange) * step(zrange) / 4)
+            @test all(sJ₄ .== step(xrange) * step(zrange) / 4)
+            @test all(sJ₅ .== step(xrange) * step(yrange) / 4)
+            @test all(sJ₆ .== step(xrange) * step(yrange) / 4)
+        end
     end
 end
