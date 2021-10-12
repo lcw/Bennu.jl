@@ -204,8 +204,13 @@ function materializepoints(referencecell::LobattoLine, vertices, connectivity)
                       c1, c2 = connectivity[e]
                       ri = $(r[1])[i]
 
-                      ((1 - ri) * vertices[c1] +
-                       (1 + ri) * vertices[c2]) / 2
+                      #((1 - ri) * vertices[c1] +
+                      # (1 + ri) * vertices[c2]) / 2
+
+                      # this is the same as above but
+                      # explicit muladds help with generating symmetric meshes
+                      (muladd(-ri, vertices[c1], vertices[c1]) +
+                       muladd( ri, vertices[c2], vertices[c2])) / 2
                   end) (i in axes(p, 1), e in axes(p, 2))
 
     return reshape(p, (length(referencecell), length(connectivity)))
@@ -263,10 +268,21 @@ function materializepoints(referencecell::LobattoQuad,
                       c1, c2, c3, c4 = connectivity[e]
                       ri, rj = $(r[1])[i], $(r[2])[j]
 
-                      ((1 - ri) * (1 - rj) * vertices[c1] +
-                       (1 + ri) * (1 - rj) * vertices[c2] +
-                       (1 - ri) * (1 + rj) * vertices[c3] +
-                       (1 + ri) * (1 + rj) * vertices[c4]) / 4
+                      #((1 - ri) * (1 - rj) * vertices[c1] +
+                      # (1 + ri) * (1 - rj) * vertices[c2] +
+                      # (1 - ri) * (1 + rj) * vertices[c3] +
+                      # (1 + ri) * (1 + rj) * vertices[c4]) / 4
+
+                      # this is the same as above but
+                      # explicit muladds help with generating symmetric meshes
+                      m1 = muladd(-rj, vertices[c1], vertices[c1]) +
+                           muladd( rj, vertices[c3], vertices[c3])
+                      m2 = muladd(-rj, vertices[c2], vertices[c2]) +
+                           muladd( rj, vertices[c4], vertices[c4])
+
+                      m1 = muladd(-ri, m1, m1) + muladd(ri, m2, m2)
+
+                      m1 / 4
                   end) (i in axes(p, 1), j in axes(p, 2), e in axes(p, 3))
 
     return reshape(p, (length(referencecell), length(connectivity)))
@@ -346,14 +362,32 @@ function materializepoints(referencecell::LobattoHex, vertices, connectivity)
                       c1, c2, c3, c4, c5, c6, c7, c8 = connectivity[e]
                       ri, rj, rk = $(r[1])[i], $(r[2])[j], $(r[3])[k]
 
-                      ((1 - ri) * (1 - rj) * (1 - rk) * vertices[c1] +
-                       (1 + ri) * (1 - rj) * (1 - rk) * vertices[c2] +
-                       (1 - ri) * (1 + rj) * (1 - rk) * vertices[c3] +
-                       (1 + ri) * (1 + rj) * (1 - rk) * vertices[c4] +
-                       (1 - ri) * (1 - rj) * (1 + rk) * vertices[c5] +
-                       (1 + ri) * (1 - rj) * (1 + rk) * vertices[c6] +
-                       (1 - ri) * (1 + rj) * (1 + rk) * vertices[c7] +
-                       (1 + ri) * (1 + rj) * (1 + rk) * vertices[c8]) / 8
+                      #((1 - ri) * (1 - rj) * (1 - rk) * vertices[c1] +
+                      # (1 + ri) * (1 - rj) * (1 - rk) * vertices[c2] +
+                      # (1 - ri) * (1 + rj) * (1 - rk) * vertices[c3] +
+                      # (1 + ri) * (1 + rj) * (1 - rk) * vertices[c4] +
+                      # (1 - ri) * (1 - rj) * (1 + rk) * vertices[c5] +
+                      # (1 + ri) * (1 - rj) * (1 + rk) * vertices[c6] +
+                      # (1 - ri) * (1 + rj) * (1 + rk) * vertices[c7] +
+                      # (1 + ri) * (1 + rj) * (1 + rk) * vertices[c8]) / 8
+
+                      # this is the same as above but
+                      # explicit muladds help with generating symmetric meshes
+                      m1 = muladd(-rk, vertices[c1], vertices[c1]) +
+                           muladd( rk, vertices[c5], vertices[c5])
+                      m2 = muladd(-rk, vertices[c3], vertices[c3]) +
+                           muladd( rk, vertices[c7], vertices[c7])
+                      m3 = muladd(-rk, vertices[c2], vertices[c2]) +
+                           muladd( rk, vertices[c6], vertices[c6])
+                      m4 = muladd(-rk, vertices[c4], vertices[c4]) +
+                           muladd( rk, vertices[c8], vertices[c8])
+
+                      m1 = muladd(-rj, m1, m1) + muladd(rj, m2, m2)
+                      m2 = muladd(-rj, m3, m3) + muladd(rj, m4, m4)
+
+                      m1 = muladd(-ri, m1, m1) + muladd(ri, m2, m2)
+
+                      m1 / 8
                   end) (i in axes(p, 1), j in axes(p, 2), k in axes(p, 3),
                         e in axes(p, 4))
 
