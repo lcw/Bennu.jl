@@ -2,4 +2,4 @@ test-job:
   stage: test
   script:
     - echo "Starting slurm job..."
-    - srun --partition=allgpu --gres=gpu:1 --nodelist=compute-8-21 .gitlab/run_hamming.sh
+    - srun --partition=math --gres=gpu:1 --nodelist=compute-8-21 .gitlab/run_hamming.sh
