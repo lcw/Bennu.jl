@@ -1,4 +1,4 @@
-abstract type AbstractGrid{C <: AbstractCell, N <: Tuple} end
+abstract type AbstractGrid{C <: AbstractCell, N <: Tuple, StackSize} end
 
 floattype(::Type{<:AbstractGrid{C}}) where {C} = floattype(C)
 arraytype(::Type{<:AbstractGrid{C}}) where {C} = arraytype(C)
@@ -14,6 +14,9 @@ Base.ndims(grid::AbstractGrid)= Base.ndims(typeof(grid))
 Base.size(grid::AbstractGrid) = Base.size(typeof(grid))
 Base.length(grid::AbstractGrid) = Base.length(typeof(grid))
 
+stackedsize(::AbstractGrid{C, N, S}) where {C, N, S} = S
+isstacked(grid::AbstractGrid) = stackedsize(grid) > 0
+
 function WriteVTK.vtk_grid(filename::AbstractString, grid::AbstractGrid,
                            args...; kwargs...)
     vtk = vtk_grid(filename, points_vtk(grid), cells_vtk(grid), args...;
@@ -23,7 +26,7 @@ function WriteVTK.vtk_grid(filename::AbstractString, grid::AbstractGrid,
     return vtk
 end
 
-struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, Q, F, G, H, B} <: AbstractGrid{C, N}
+struct NodalGrid{C <: AbstractCell, N <: Tuple, StackSize, V, Y, P, Q, F, G, H, B} <: AbstractGrid{C, N, StackSize}
     referencecell::C
     vertices::V
     connectivity::Y
@@ -36,15 +39,15 @@ struct NodalGrid{C <: AbstractCell, N <: Tuple, V, Y, P, Q, F, G, H, B} <: Abstr
     type::Symbol
 end
 
-function Adapt.adapt_structure(to, grid::NodalGrid{C1, N}) where {C1, N}
+function Adapt.adapt_structure(to, grid::NodalGrid{C1, N, S}) where {C1, N, S}
     names = fieldnames(NodalGrid)
     args = ntuple(j->adapt(to, getfield(grid, names[j])), length(names))
     C2 = typeof(args[1])
-    NodalGrid{C2, N, typeof.(args[2:end-1])...}(args...)
+    NodalGrid{C2, N, S, typeof.(args[2:end-1])...}(args...)
 end
 
 function NodalGrid(warp::Function, referencecell, vertices, connectivity, type=:unknown;
-                   faces=nothing, boundaryfaces=nothing)
+                   faces=nothing, boundaryfaces=nothing, stacksize::Integer=0)
     C = typeof(referencecell)
     N = size(connectivity)
     V = typeof(vertices)
@@ -73,7 +76,7 @@ function NodalGrid(warp::Function, referencecell, vertices, connectivity, type=:
     end
     B = typeof(boundaryfaces)
 
-    types = (V, Y, P, Q, F, G, H, B)
+    types = (stacksize, V, Y, P, Q, F, G, H, B)
     return NodalGrid{C, Tuple{N...}, types...}(referencecell, vertices,
                                                connectivity, points, metrics,
                                                faces, faceindices, facemetrics,
@@ -81,9 +84,10 @@ function NodalGrid(warp::Function, referencecell, vertices, connectivity, type=:
 end
 
 function NodalGrid(referencecell, vertices, connectivity, type=:unknown;
-                   faces=nothing, boundaryfaces=nothing)
+        faces=nothing, boundaryfaces=nothing, stacksize::Integer=0)
     return NodalGrid(identity, referencecell, vertices, connectivity, type;
-                     faces=faces, boundaryfaces=boundaryfaces)
+                     faces=faces, boundaryfaces=boundaryfaces,
+                     stacksize=stacksize)
 end
 
 referencecell(grid::NodalGrid) = grid.referencecell
