@@ -14,8 +14,9 @@ Base.ndims(grid::AbstractGrid)= Base.ndims(typeof(grid))
 Base.size(grid::AbstractGrid) = Base.size(typeof(grid))
 Base.length(grid::AbstractGrid) = Base.length(typeof(grid))
 
-stackedsize(::AbstractGrid{C, N, S}) where {C, N, S} = S
-isstacked(grid::AbstractGrid) = stackedsize(grid) > 0
+stacksize(::AbstractGrid{C, N, S}) where {C, N, S} = S
+horizontalsize(grid::AbstractGrid) = div(length(grid), stacksize(grid))
+isstacked(grid::AbstractGrid) = stacksize(grid) > 0
 
 function WriteVTK.vtk_grid(filename::AbstractString, grid::AbstractGrid,
                            args...; kwargs...)
