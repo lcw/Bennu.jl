@@ -17,7 +17,8 @@ using StructArrays
 using Tullio
 using WriteVTK
 
-export LobattoCell, NodalGrid, CartesianOrdering, HilbertOrdering
+export LobattoCell, NodalGrid, CartesianOrdering, HilbertOrdering,
+       StackedOrdering
 
 export spectralderivative, spectralinterpolation, legendregauss,
        legendregausslobatto, partition, quantize,

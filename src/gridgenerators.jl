@@ -1,6 +1,7 @@
 abstract type AbstractOrdering end
 struct CartesianOrdering <: AbstractOrdering end
 struct HilbertOrdering <: AbstractOrdering end
+struct StackedOrdering{T <: AbstractOrdering} <: AbstractOrdering end
 
 function brickgrid(referencecell::LobattoCell, coordinates::Tuple;
                    ordering::AbstractOrdering=CartesianOrdering(),
@@ -210,8 +211,24 @@ function brickgrid(warp::Function, referencecell::LobattoCell,
     end
 
     if ordering isa CartesianOrdering
+        stacksize = 0
     elseif ordering isa HilbertOrdering
+        stacksize = 0
         perm = hilbertperm(dims)
+        connectivity = connectivity[perm]
+        boundaryfaces = boundaryfaces[:, perm]
+        facenumbers = ntuple(i->facenumbers[i][:, perm], length(facenumbers))
+    elseif ordering isa StackedOrdering
+        stacksize = dims[end]
+        if ordering isa StackedOrdering{CartesianOrdering}
+            base_perm = Vector(1:prod(dims[1:end-1]))
+        elseif ordering isa StackedOrdering{HilbertOrdering}
+            base_perm = length(dims) == 1 ? [1] : hilbertperm(dims[1:end-1])
+        else
+            throw(ArgumentError("Unsuported stacked ordering $ordering."))
+        end
+        stack = length(base_perm) * (0:dims[end]-1)
+        perm = reshape(stack .+ base_perm', prod(dims))
         connectivity = connectivity[perm]
         boundaryfaces = boundaryfaces[:, perm]
         facenumbers = ntuple(i->facenumbers[i][:, perm], length(facenumbers))
@@ -234,7 +251,7 @@ function brickgrid(warp::Function, referencecell::LobattoCell,
     end
 
     return NodalGrid(warp, referencecell, vertices, connectivity, :brick;
-                     faces=faces, boundaryfaces=boundaryfaces)
+                     faces=faces, boundaryfaces=boundaryfaces, stacksize=stacksize)
 end
 
 function cubespherewarp(point)
@@ -398,6 +415,7 @@ function cubedspheregrid(referencecell::LobattoCell,
         u = z * offset .+ c
         (l..., u...)
     end
+    stacksize = length(vert_coordinate) - 1
 
-    return NodalGrid(cubespherewarp, referencecell, vertices, connectivity, :cubedsphere)
+    return NodalGrid(cubespherewarp, referencecell, vertices, connectivity, :cubedsphere; stacksize=stacksize)
 end
