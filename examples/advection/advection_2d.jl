@@ -39,7 +39,7 @@ function run(solution, FT, A, N, K; outputvtk=false, vtkdir="output")
 
     g, J = components(metrics(grid))
 
-    g₁₁, g₁₂, g₂₁, g₂₂ = components(g)
+    g₁₁, g₁₂, _, g₂₁, g₂₂ = components(g)
 
     M = mass(cell)
     D₁, D₂ = derivatives(cell)
