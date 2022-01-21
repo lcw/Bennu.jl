@@ -36,6 +36,16 @@ struct LobattoCell{T, A, S, N, O, P, D, M, FM, E, C} <: AbstractCell{T, A, S, N}
     connectivity::C
 end
 
+function Base.show(io::IO, cell::LobattoCell{T, A, N}) where {T, A, N}
+    print(io, "LobattoCell{")
+    Base.show(io, T)
+    print(io, ", ")
+    Base.show(io, A)
+    print(io, ", ")
+    Base.show(io, N)
+    print(io, "}")
+end
+
 function LobattoCell{T, A}(dims...) where {T, A}
     N = length(dims)
     if all(dims[1] .== dims)

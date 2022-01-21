@@ -40,6 +40,24 @@ struct NodalGrid{C <: AbstractCell, N <: Tuple, StackSize, V, Y, P, Q, F, G, H, 
     type::Symbol
 end
 
+function Base.show(io::IO, grid::NodalGrid{C, N}) where {C, N}
+    print(io, "NodalGrid{")
+    # Better to display C somehow?
+    Base.show(io, grid.referencecell)
+    print(io, "} of type ")
+    Base.show(io, string(grid.type))
+    print(io, " with ")
+    if isstacked(grid)
+        Base.show(io, stacksize(grid))
+        print(io, " vertical elements and ")
+        Base.show(io, horizontalsize(grid))
+        print(io, " horizontal elements")
+    else
+        Base.show(io, length(grid))
+        print(io, " elements")
+    end
+end
+
 function Adapt.adapt_structure(to, grid::NodalGrid{C1, N, S}) where {C1, N, S}
     names = fieldnames(NodalGrid)
     args = ntuple(j->adapt(to, getfield(grid, names[j])), length(names))
