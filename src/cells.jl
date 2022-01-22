@@ -341,8 +341,11 @@ function materializemetrics(referencecell::LobattoQuad, points, unwarpedbrick)
     @tullio avx=false n₁₄[i, e] = J[i, end, e] * g₂₁[i, end, e]
     @tullio avx=false n₂₄[i, e] = J[i, end, e] * g₂₂[i, end, e]
 
-    @. fJ = hypot(n₁, n₂)
-    @. n /= fJ
+    # Here we are working around the fact that broadcast things that
+    # n and fJ might alias because they are in the same base array.
+    normn = hypot.(n₁, n₂)
+    fJ .= normn
+    n ./= normn
 
     return (metrics, facemetrics)
 end
@@ -508,8 +511,11 @@ function materializemetrics(referencecell::LobattoHex, points, unwarpedbrick)
     @tullio avx=false n₃₅[i, j, e] = -J[  i,   j,   1, e] * g₃₃[  i,   j,   1, e]
     @tullio avx=false n₃₆[i, j, e] =  J[  i,   j, end, e] * g₃₃[  i,   j, end, e]
 
-    @. fJ = norm(n)
-    @. n /= fJ
+    # Here we are working around the fact that broadcast thinks that
+    # n and fJ might alias because they are in the same base array.
+    normn = norm.(n)
+    fJ .= normn
+    n ./= normn
 
     return (metrics, facemetrics)
 end
