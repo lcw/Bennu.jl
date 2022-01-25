@@ -50,5 +50,6 @@ include("quadratures.jl")
 include("sparsearrays.jl")
 include("structarrays.jl")
 include("tuples.jl")
+include("banded.jl")
 
 end
