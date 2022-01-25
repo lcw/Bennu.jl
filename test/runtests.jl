@@ -36,6 +36,7 @@ include("quadratures.jl")
 include("sparsearrays.jl")
 include("structarrays.jl")
 include("tuples.jl")
+include("banded.jl")
 
 @testset "examples" begin
     julia = Base.julia_cmd()
