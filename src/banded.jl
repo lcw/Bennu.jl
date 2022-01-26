@@ -1,22 +1,111 @@
 using KernelAbstractions.Extras: @unroll
 
 # Simple wrapper struct that allows us to index a column-wise banded matrix like
-# it is a non-banded matrix
-struct BandIndexer{C, A, I, I}
+# it is a non-banded matrix via views
+struct BatchedView{A, I}
     mat::A
     ij::I
     eh::I
-    BandIndexer{C}(mat::A, ij::I, eh::I) where {A, I, C} = new{C, A, I, I}(mat, ij, eh)
 end
-Base.@propagate_inbounds function Base.getindex(B::BandIndexer{C}, u, v) where {C}
-    return B.mat[B.ij, C + u - v, v, B.eh]
+Base.@propagate_inbounds function Base.getindex(B::BatchedView, u, v)
+    return B.mat[B.ij, u, v, B.eh]
 end
-Base.@propagate_inbounds function Base.setindex!(B::BandIndexer{C}, val, u, v) where {C}
-    return B.mat[B.ij, C + u - v, v, B.eh] = val
+Base.@propagate_inbounds function Base.setindex!(B::BatchedView, val, u, v)
+    return B.mat[B.ij, u, v, B.eh] = val
+end
+
+struct BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A <: AbstractArray{T, 4}}
+    data::A
+end
+Base.parent(fac::BatchedBandedLU) = fac.data
+Base.@propagate_inbounds function Base.getindex(
+        B::BatchedBandedLU{Nqh, n, ku, kl}, ij, u, v, eh
+    ) where {Nqh, n, ku, kl}
+    return parent(B)[ij, ku + 1 + u - v, v, eh]
+end
+Base.@propagate_inbounds function Base.setindex!(
+        B::BatchedBandedLU{Nqh, n, ku, kl}, val, ij, u, v, eh
+    ) where {Nqh, n, ku, kl}
+    return parent(B)[ij, ku + 1 + u - v, v, eh] = val
+end
+Base.view(B::BatchedBandedLU, ij, ::Colon, ::Colon, eh) = BatchedView(B, ij, eh)
+function Adapt.adapt_structure(to,
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A}
+    ) where{Nqh, n, ku, kl, Neh, T, A}
+    mat = adapt(to, parent(fac))
+    B = typeof(mat)
+    return BatchedBandedLU{Nqh, n, ku, kl, Neh, T, B}(mat)
+end
+
+
+"""
+    batchedbandedlu!(A::AbstractArray{T, 4} [, kl = div(size(mat, 2) - 1, 2)])
+
+Compute the banded LU factors of the batched matrix `A`. Uses the `A` as storage
+for the factors. The optional argument `kl` is the lower bandwidth of the
+matrix; upper bandwidth is calculated as `ku = size(mat, 2) - 1 - kl`.
+
+The matrix `A` should have indexing `A[i, b, v, h]` where the indices `i` and
+`h` are the batch indices with the size of the first index defining the kernel 
+workgroup size the last index the number of workgroups. The index `b` is the
+band index for column `v`; storage uses the [LAPACK
+format](https://www.netlib.org/lapack/lug/node124.html).
+
+For example the matrix `A` would be stored in banded storage `B` with lower
+bandwidth `kl = 2`.
+
+```reply
+julia> A = [11 12  0  0  0  0  0
+            21 22 23  0  0  0  0
+            31 32 33 34  0  0  0
+            41 42 43 44 45  0  0
+             0 52 53 54 55 56  0
+             0  0 63 64 65 66 67
+             0  0  0 74 75 76 77]
+7×7 Matrix{Int64}:
+ 11  12   0   0   0   0   0
+ 21  22  23   0   0   0   0
+ 31  32  33  34   0   0   0
+ 41  42  43  44  45   0   0
+  0  52  53  54  55  56   0
+  0   0  63  64  65  66  67
+  0   0   0  74  75  76  77
+
+julia> B = [ 0 12 23 34 45 56 66 67
+            11 22 33 44 55 65 77  0
+            21 32 43 54 64 76  0  0
+            31 42 53 63 75  0  0  0
+            41 52  0 74  0  0  0  0]
+5×8 Matrix{Int64}:
+  0  12  23  34  45  56  66  67
+ 11  22  33  44  55  65  77   0
+ 21  32  43  54  64  76   0   0
+ 31  42  53  63  75   0   0   0
+ 41  52   0  74   0   0   0   0
+```
+"""
+function batchedbandedlu!(
+        mat::A,
+        kl = div(size(mat, 2) - 1, 2)
+    ) where {T, A <: AbstractArray{T, 4}}
+    (Nqh, width, n, Neh) = size(mat)
+    ku = width - 1 - kl
+    fac = BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A}(mat)
+    return batchedbandedlu!(fac)
+end
+
+function batchedbandedlu!(
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A}
+    ) where {Nqh, n, ku, kl, Neh, T, A}
+    event = Event(device(A))
+    kernel! = bandedlu_kernel!(device(A), (Nqh,))
+    event = kernel!(fac; ndrange = (Nqh * Neh,), dependencies = (event,))
+    wait(event)
+    return fac
 end
 
 @kernel function bandedlu_kernel!(
-        A, ::Val{Nqh}, ::Val{n}, ::Val{ku}, ::Val{kl}, ::Val{Neh}
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh}
     ) where{Nqh, n, ku, kl, Neh}
 
     @uniform begin
@@ -31,7 +120,7 @@ end
     ij = @index(Local, Linear)
 
     # Create an object that indexes like a matrix for this thread
-    U = L = BandIndexer{c}(A, ij, eh)
+    U = L = view(fac, ij, :, :, eh)
 
     # matrix index: (u,v) -> banded index: (c + u - v, u)
     # v is column index
@@ -40,9 +129,7 @@ end
         invUvv = 1/U[v, v]
 
         # Fill L
-        for p = 1:kl
-            # L[v + p, v] = U[v + p, v] / U[v, v]
-            # L[c + p, v] *= invUvv
+        @unroll for p = 1:kl
             L[v + p, v] *= invUvv
         end
 
@@ -64,25 +151,10 @@ end
     end
 end
 
-function bandedlu!(mat, kl = div(size(mat, 2) - 1, 2))
-    @assert ndims(mat) == 4
-
-    (Nqh, width, n, Neh) = size(mat)
-    ku = width - 1 - kl
-    A = arraytype(mat)
-
-    event = Event(device(A))
-    kernel! = bandedlu_kernel!(device(A), (Nqh,))
-    event = kernel!(mat, Val(Nqh), Val(n), Val(ku), Val(kl), Val(Neh);
-                    ndrange = (Nqh * Neh,), dependencies = (event,))
-    wait(event)
-end
-
 @kernel function banded_forward_kernel!(
         x_::AbstractArray{T, 3},
-        fac::AbstractArray{T, 4},
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T},
         b_::AbstractArray{T, 3},
-        ::Val{Nqh}, ::Val{n}, ::Val{ku}, ::Val{kl}, ::Val{Neh}
     ) where{Nqh, n, ku, kl, Neh, T}
 
     # private storage for the part of b we are working on
@@ -95,17 +167,17 @@ end
     ij = @index(Local, Linear)
 
     # Create an object that indexes like a matrix for this thread
-    L = BandIndexer{ku + 1}(fac, ij, eh)
+    L = view(fac, ij, :, :, eh)
     b = view(b_, ij, :, eh)
     x = view(x_, ij, :, eh)
 
     # Fill the private storage of b
-    for v = 1:kl+1
+    @inbounds for v = 1:kl+1
         p_b[v] = v ≤ n ? b[v] : -zero(T)
     end
 
     # Loop over the columns
-    for v = 1:n
+    @inbounds for v = 1:n
         # Pull out the b associated with v
         x[v] = bv = p_b[1]
 
@@ -128,9 +200,8 @@ end
 
 @kernel function banded_backward_kernel!(
         x_::AbstractArray{T, 3},
-        fac::AbstractArray{T, 4},
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T},
         b_::AbstractArray{T, 3},
-        ::Val{Nqh}, ::Val{n}, ::Val{ku}, ::Val{kl}, ::Val{Neh}
     ) where{Nqh, n, ku, kl, Neh, T}
 
     # private storage for the part of b we are working on
@@ -143,18 +214,18 @@ end
     ij = @index(Local, Linear)
 
     # Create an object that indexes like a matrix for this thread
-    U = BandIndexer{ku + 1}(fac, ij, eh)
+    U = view(fac, ij, :, :, eh)
     b = view(b_, ij, :, eh)
     x = view(x_, ij, :, eh)
 
     # Fill the private storage of b
-    for q = 1:ku + 1
+    @inbounds for q = 1:ku + 1
         v = n + 1 - q
         p_b[q] = v > 0 ? b[v] : -zero(T)
     end
 
     # Loop over the columns
-    for v = n:-1:1
+    @inbounds for v = n:-1:1
         # Scale and store the first element of b
         Uvv = U[v, v]
         x[v] = bv = p_b[1] / Uvv
@@ -176,25 +247,21 @@ end
     end
 end
 
-function bandedsolve!(x::AbstractArray{T, 3},
-        fac::AbstractArray{T, 4},
+function bandedsolve!(
+        x::AbstractArray{T, 3},
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A},
         b::AbstractArray{T, 3},
-        kl = div(size(fac, 2) - 1, 2)
-    ) where {T}
+    ) where {Nqh, n, ku, kl, Neh, T, A}
 
-    (Nqh, width, n, Neh) = size(fac)
-    ku = width - 1 - kl
     @assert (Nqh, n, Neh) == size(b)
     @assert (Nqh, n, Neh) == size(x)
 
-    event = Event(device(fac))
-    kernel! = banded_forward_kernel!(device(fac), (Nqh,))
-    event = kernel!(x, fac, b,
-                    Val(Nqh), Val(n), Val(ku), Val(kl), Val(Neh);
+    event = Event(device(A))
+    kernel! = banded_forward_kernel!(device(A), (Nqh,))
+    event = kernel!(x, fac, b;
                     ndrange = (Nqh * Neh,), dependencies = (event,))
-    kernel! = banded_backward_kernel!(device(fac), (Nqh,))
-    event = kernel!(x, fac, x,
-                    Val(Nqh), Val(n), Val(ku), Val(kl), Val(Neh);
+    kernel! = banded_backward_kernel!(device(A), (Nqh,))
+    event = kernel!(x, fac, x;
                     ndrange = (Nqh * Neh,), dependencies = (event,))
     wait(event)
 end
