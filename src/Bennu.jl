@@ -36,6 +36,8 @@ export metrics, facemetrics
 
 export faces, faceindices, boundaryfaces, number_of_faces, faceviews
 
+export batchedbandedlu!
+
 include("permutations.jl")
 
 include("arrays.jl")

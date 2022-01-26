@@ -51,12 +51,12 @@
 
         # Check the factorization
         d_A = AT(h_A)
-        d_LU = Bennu.batchedbandedlu!(d_A, kl)
+        d_LU = batchedbandedlu!(d_A, kl)
         @test Array(parent(d_LU)) ≈ h_D
 
         if kl == ku
             d_A = AT(h_A)
-            d_LU = Bennu.batchedbandedlu!(d_A)
+            d_LU = batchedbandedlu!(d_A)
             @test Array(parent(d_LU)) ≈ h_D
         end
 
