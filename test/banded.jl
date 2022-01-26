@@ -51,20 +51,20 @@
 
         # Check the factorization
         d_A = AT(h_A)
-        Bennu.bandedlu!(d_A, kl)
-        @test Array(d_A) ≈ h_D
+        d_LU = Bennu.batchedbandedlu!(d_A, kl)
+        @test Array(parent(d_LU)) ≈ h_D
 
         if kl == ku
             d_A = AT(h_A)
-            Bennu.bandedlu!(d_A)
-            @test Array(d_A) ≈ h_D
+            d_LU = Bennu.batchedbandedlu!(d_A)
+            @test Array(parent(d_LU)) ≈ h_D
         end
 
         # copy b to a device field array
         d_b = AT(h_b)
         d_x = similar(d_b)
 
-        Bennu.bandedsolve!(d_x, d_A, d_b, kl)
+        Bennu.bandedsolve!(d_x, d_LU, d_b)
         @test Array(d_x) ≈ h_x
     end
 end
