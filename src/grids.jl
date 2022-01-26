@@ -350,3 +350,10 @@ end
         min_neighbour_distance[ijk, e] = md
     end
 end
+
+function fieldarray(init, S, grid::AbstractGrid)
+    Nq = length(celltype(grid))
+    Ne = length(grid)
+    A = arraytype(grid)
+    return fieldarray(init, S, A, (Nq, Ne))
+end
