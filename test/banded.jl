@@ -64,7 +64,7 @@
         d_b = AT(h_b)
         d_x = similar(d_b)
 
-        Bennu.bandedsolve!(d_x, d_LU, d_b)
+        ldiv!(d_x, d_LU, d_b)
         @test Array(d_x) ≈ h_x
     end
 end

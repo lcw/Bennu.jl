@@ -247,10 +247,10 @@ end
     end
 end
 
-function bandedsolve!(
+function LinearAlgebra.ldiv!(
         x::AbstractArray{T, 3},
         fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A},
-        b::AbstractArray{T, 3},
+        b::AbstractArray{T, 3} = x,
     ) where {Nqh, n, ku, kl, Neh, T, A}
 
     @assert (Nqh, n, Neh) == size(b)
