@@ -1,9 +1,15 @@
 @testset "Banded Solvers" begin
-    n = 100
-    Nqh, Neh = 32, 100
+    Nfields = 5
+    Nev = 10
+    Nqv = 4
 
-    kuls = ((3, 3), (3, 10), (10, 3), (10, 10))
-    kuls = ((10, 10),)
+    Nqh, Neh = 32, 10
+
+    kuls = ((Nqv * Nfields, 2Nqv * Nfields),
+            (2Nqv * Nfields, Nqv * Nfields),
+            (2Nqv * Nfields, 2Nqv * Nfields))
+
+    n = Nfields * Nev * Nqv
 
     TAs = ((Float64,  Array), (Float32,  Array))
     if CUDA.has_cuda_gpu()
@@ -15,8 +21,14 @@
 
         width = ku + kl + 1
 
+        # Banded matrices
         h_A = zeros(T, Nqh, width, n, Neh)
+        # Banded matrix factors
         h_D = zeros(T, Nqh, width, n, Neh)
+        # RHS and solution vector
+        h_x = zeros(T, Nqh, n, Neh)
+        h_b = zeros(T, Nqh, n, Neh)
+        # Loop through and set columns
         for eh = 1:Neh, ij = 1:Nqh
             # Create some random factors
             U = diagm(0=>ones(T, n),
@@ -24,20 +36,35 @@
             L = diagm(0=>ones(T, n),
                       ntuple(k -> -k=>rand(rng, T, n-k) / k, kl)...)
             C = L * U
-            L, U
             D = L + U - I
+
+            # Store matrices in banded form
             for k = -ku:kl
                 h_A[ij, k + ku + 1, max(1, 1-k):min(n-k, n), eh] = diag(C, -k)
                 h_D[ij, k + ku + 1, max(1, 1-k):min(n-k, n), eh] = diag(D, -k)
             end
+
+            # Create column solution and RHS vectors
+            h_x[ij, :, eh] = rand(rng, T, n)
+            h_b[ij, :, eh] = C * h_x[ij, :, eh]
         end
+
+        # Check the factorization
         d_A = AT(h_A)
         Bennu.bandedlu!(d_A, kl)
         @test Array(d_A) ≈ h_D
+
         if kl == ku
             d_A = AT(h_A)
             Bennu.bandedlu!(d_A)
             @test Array(d_A) ≈ h_D
         end
+
+        # copy b to a device field array
+        d_b = AT(h_b)
+        d_x = similar(d_b)
+
+        Bennu.bandedsolve!(d_x, d_A, d_b, kl)
+        @test Array(d_x) ≈ h_x
     end
 end
