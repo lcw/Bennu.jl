@@ -1,9 +1,12 @@
 @testset "Banded Solvers" begin
     Nfields = 5
     Nev = 10
-    Nqv = 4
 
-    Nqh, Neh = 32, 10
+    Nq = (5, 6, 4)
+
+    Nqv = Nq[end]
+
+    Nqh, Neh = prod(Nq[1:end-1]), 10
 
     kuls = ((Nqv * Nfields, 2Nqv * Nfields),
             (2Nqv * Nfields, Nqv * Nfields),
@@ -66,5 +69,14 @@
 
         ldiv!(d_x, d_LU, d_b)
         @test Array(d_x) ≈ h_x
+
+        # make sure this all works with fieldarray types too
+        fld_b = fieldarray(undef, SVector{Nfields, T}, AT, (Nq..., Nev * Neh))
+        parent(components(fld_b)[1])[:] .= d_b[:]
+        fld_x = fieldarray(undef, SVector{Nfields, T}, AT, (Nq..., Nev * Neh))
+        ldiv!(fld_x, d_LU, fld_b)
+
+        @test Array(parent(components(fld_x)[1])) ≈
+           reshape(h_x, Nq..., Nfields, Nev * Neh)
     end
 end
