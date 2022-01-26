@@ -265,3 +265,21 @@ function LinearAlgebra.ldiv!(
                     ndrange = (Nqh * Neh,), dependencies = (event,))
     wait(event)
 end
+
+function LinearAlgebra.ldiv!(
+        x::StructArray,
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A},
+        b::StructArray
+    ) where {Nqh, n, ku, kl, Neh, T, A}
+
+    x_array = reshape(parent(components(x)[1]), Nqh, n, Neh)
+    b_array = reshape(parent(components(b)[1]), Nqh, n, Neh)
+
+    # Make sure this is really a fieldarray!
+    @assert all(map(y -> pointer(y) === pointer(x_array),
+                    parent.(components(x))))
+    @assert all(map(y -> pointer(y) === pointer(b_array),
+                    parent.(components(b))))
+
+    ldiv!(x_array, fac, b_array)
+end
