@@ -293,3 +293,64 @@ function LinearAlgebra.ldiv!(
 
     ldiv!(x_array, fac, b_array)
 end
+
+# NOTE: This kernel has not been optimized at all!
+@kernel function banded_multiply_kernel!(
+        y_::AbstractArray{T, 3},
+        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T},
+        x_::AbstractArray{T, 3},
+    ) where{Nqh, n, ku, kl, Neh, T}
+    # private storage for the part of b we are working on
+    # horizonal element number
+    eh = @index(Group, Linear)
+
+    # horizontal degree of freedom
+    ij = @index(Local, Linear)
+
+    # Create an object that indexes like a matrix for this thread
+    A = view(mat, ij, :, :, eh)
+    x = view(x_, ij, :, eh)
+    y = view(y_, ij, :, eh)
+
+    # Loop over the rows
+    @inbounds for u = 1:n
+        tmp = -zero(T)
+        @unroll for p = 1:kl
+            v = u - p
+            v > 0 || break
+            tmp += A[u, v] * x[v]
+        end
+        tmp += A[u, u] * x[u]
+        @unroll for q = 1:ku
+            v = u + q
+            v ≤ n || break
+            tmp += A[u, v] * x[v]
+        end
+        y[u] = tmp
+    end
+end
+
+# NOTE: This not high-performance code!
+function LinearAlgebra.mul!(
+        y::AbstractArray{T, 3},
+        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A},
+        x::AbstractArray{T, 3},
+    ) where {Nqh, n, ku, kl, Neh, T, A}
+
+    @assert (Nqh, n, Neh) == size(y)
+    @assert (Nqh, n, Neh) == size(x)
+
+    event = Event(device(A))
+    kernel! = banded_multiply_kernel!(device(A), (Nqh,))
+    event = kernel!(y, mat, x;
+                    ndrange = (Nqh * Neh,), dependencies = (event,))
+    wait(event)
+end
+function batchedbandedmatrix!(
+        mat::A,
+        kl = div(size(mat, 2) - 1, 2)
+    ) where {T, A <: AbstractArray{T, 4}}
+    (Nqh, width, n, Neh) = size(mat)
+    ku = width - 1 - kl
+    return BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A}(mat)
+end

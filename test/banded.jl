@@ -78,5 +78,14 @@
 
         @test Array(parent(components(fld_x)[1])) ≈
            reshape(h_x, Nq..., Nfields, Nev * Neh)
+
+        # Check the that the banded matvec works
+        # NOTE: This NOT high-performance code!
+        A = Bennu.batchedbandedmatrix!(AT(h_A), kl)
+        d_x = AT(h_x)
+        d_y = similar(d_x)
+        mul!(d_y, A, d_x)
+
+        @test Array(d_y) ≈ h_b
     end
 end
