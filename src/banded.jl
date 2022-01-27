@@ -14,29 +14,39 @@ Base.@propagate_inbounds function Base.setindex!(B::BatchedView, val, u, v)
     return B.mat[B.ij, u, v, B.eh] = val
 end
 
-struct BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A <: AbstractArray{T, 4}}
+abstract type AbstractBatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A <: AbstractArray{T, 4}} end
+struct BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A} <: AbstractBatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A}
     data::A
 end
-Base.parent(fac::BatchedBandedLU) = fac.data
+struct BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A} <: AbstractBatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A}
+    data::A
+end
+Base.parent(mat::AbstractBatchedBandedMatrix) = mat.data
 Base.@propagate_inbounds function Base.getindex(
-        B::BatchedBandedLU{Nqh, n, ku, kl}, ij, u, v, eh
+        B::AbstractBatchedBandedMatrix{Nqh, n, ku, kl}, ij, u, v, eh
     ) where {Nqh, n, ku, kl}
     return parent(B)[ij, ku + 1 + u - v, v, eh]
 end
 Base.@propagate_inbounds function Base.setindex!(
-        B::BatchedBandedLU{Nqh, n, ku, kl}, val, ij, u, v, eh
+        B::AbstractBatchedBandedMatrix{Nqh, n, ku, kl}, val, ij, u, v, eh
     ) where {Nqh, n, ku, kl}
     return parent(B)[ij, ku + 1 + u - v, v, eh] = val
 end
-Base.view(B::BatchedBandedLU, ij, ::Colon, ::Colon, eh) = BatchedView(B, ij, eh)
+Base.view(B::AbstractBatchedBandedMatrix, ij, ::Colon, ::Colon, eh) = BatchedView(B, ij, eh)
 function Adapt.adapt_structure(to,
-        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A}
+        mat::BatchedBandedLU{Nqh, n, ku, kl, Neh, T, A}
     ) where{Nqh, n, ku, kl, Neh, T, A}
-    mat = adapt(to, parent(fac))
+    mat = adapt(to, parent(mat))
     B = typeof(mat)
     return BatchedBandedLU{Nqh, n, ku, kl, Neh, T, B}(mat)
 end
-
+function Adapt.adapt_structure(to,
+        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A}
+    ) where{Nqh, n, ku, kl, Neh, T, A}
+    mat = adapt(to, parent(mat))
+    B = typeof(mat)
+    return BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, B}(mat)
+end
 
 """
     batchedbandedlu!(A::AbstractArray{T, 4} [, kl = div(size(mat, 2) - 1, 2)])
