@@ -9,7 +9,6 @@ using GPUArrays
 using KernelAbstractions
 using LazyArrays
 using LinearAlgebra
-using LoopVectorization
 using SparseArrays
 using StaticArrays
 using StaticArrays: tuple_prod, tuple_length, size_to_tuple
