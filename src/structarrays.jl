@@ -57,11 +57,13 @@ end
         end
         return
     end
+    elements = length(dest)
+    elements_per_thread = typemax(Int)
     heuristic = GPUArrays.launch_heuristic(GPUArrays.backend(dest),
-                                           broadcast_kernel, dest, bc′, 1)
-    config = GPUArrays.launch_configuration(GPUArrays.backend(dest),
-                                            heuristic, length(dest),
-                                            typemax(Int))
+                                           broadcast_kernel, dest, bc′, 1;
+                                           elements, elements_per_thread)
+    config = GPUArrays.launch_configuration(GPUArrays.backend(dest), heuristic;
+                                            elements, elements_per_thread)
     GPUArrays.gpu_call(broadcast_kernel, dest, bc′, config.elements_per_thread;
                        threads=config.threads, blocks=config.blocks)
 
