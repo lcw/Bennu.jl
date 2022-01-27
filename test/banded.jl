@@ -87,5 +87,14 @@
         mul!(d_y, A, d_x)
 
         @test Array(d_y) ≈ h_b
+
+        # Check that we can form a banded matrix
+        rhs!(y, x, event) = mul!(y, A, x, event)
+
+        B = Bennu.batchedbandedmatrix(rhs!, d_y, d_x, kl, ku, Nqh+max(ku, kl))
+        @test all(parent(A) ≈ parent(B))
+
+        Bennu.batchedbandedmatrix!(rhs!, B, d_y, d_x)
+        @test all(parent(A) ≈ parent(B))
     end
 end

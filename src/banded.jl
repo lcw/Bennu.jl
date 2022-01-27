@@ -335,17 +335,20 @@ function LinearAlgebra.mul!(
         y::AbstractArray{T, 3},
         mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A},
         x::AbstractArray{T, 3},
+        in_event = nothing
     ) where {Nqh, n, ku, kl, Neh, T, A}
 
     @assert (Nqh, n, Neh) == size(y)
     @assert (Nqh, n, Neh) == size(x)
 
-    event = Event(device(A))
+    event = in_event isa Event ? in_event : Event(device(A))
     kernel! = banded_multiply_kernel!(device(A), (Nqh,))
     event = kernel!(y, mat, x;
                     ndrange = (Nqh * Neh,), dependencies = (event,))
-    wait(event)
+    in_event isa Event || wait(event)
+    return in_event isa Event ? event : y
 end
+
 function batchedbandedmatrix!(
         mat::A,
         kl = div(size(mat, 2) - 1, 2)
@@ -353,4 +356,137 @@ function batchedbandedmatrix!(
     (Nqh, width, n, Neh) = size(mat)
     ku = width - 1 - kl
     return BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, A}(mat)
+end
+
+@kernel function banded_setvector_kernel!(
+        y::AbstractArray{T, 3},
+        x::AbstractArray{T, 3},
+        w,
+        ::Val{width}, 
+        ::Val{Nqv},
+        ::Val{n}
+    ) where{T, width, Nqv, n}
+
+    # horizonal element number
+    eh, ev = @index(Group, NTuple)
+
+    # horizontal degree of freedom
+    ij, k = @index(Local, NTuple)
+
+    # Loop over the "band" and set the values of `0` or `1`
+    @inbounds for p = 0:Nqv:width-1
+        v = k + p + (ev - 1) * width
+
+        if v ≤ n
+            x[ij, v, eh] = mod1(v, width) == w
+            y[ij, v, eh] = 0
+        end
+    end
+end
+
+@kernel function banded_setmatrix_kernel!(
+        A_::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T},
+        x_::AbstractArray{T, 3},
+        w,
+        ::Val{Nqv}
+    ) where{Nqh, n, ku, kl, Neh, T, Nqv}
+
+    # horizonal element number
+    eh, ev = @index(Group, NTuple)
+
+    # horizontal degree of freedom
+    ij, k = @index(Local, NTuple)
+
+    v = w + (ev-1) * (kl + ku + 1)
+
+    A = view(A_, ij, :, :, eh)
+    x = view(x_, ij, :, eh)
+    # if v is a valid column
+    @inbounds if v ≤ n
+        # Loop over the band and set the matrix values
+        for b = -ku:Nqv:kl
+            p = b + k - 1
+            u = v + p
+            # If inside the matrix copy from x otherwise set 0
+            if 1 ≤ u ≤ n && p ≤ kl
+                A[u, v] = x[u]
+            elseif p ≤ kl
+                A[u, v] = 0
+            end
+        end
+    end
+end
+
+"""
+    batchedbandedmatrix(matvec!, y::AbstractArray{T, 3}, x::AbstractArray{T, 3},
+                        kl, ku[, nthreads=1024])
+
+Return the banded matrix with lower and upper bandwidths `kl` and `ku` defined
+by the matrix-vector multiplication `matvec!` where `matvec!(y, x)` should set
+`y = A * x` where `x` and `y` are batched vectors of with `size(x) == size(y) ==
+[Nqh, n, Neh]`.
+
+The optional argument `nthreads` defines the number of total threads to use per
+workgroup in the kernel launch.
+"""
+function batchedbandedmatrix(
+        matvec!::Function,
+        y::A, x::A, kl, ku,
+        nthreads = 1024
+    ) where {T, A<:AbstractArray{T, 3}}
+
+    (Nqh, n, Neh) = size(y)
+    @assert (Nqh, n, Neh) == size(x)
+
+    width = ku + kl + 1
+    data = similar(y, Nqh, width, n, Neh)
+
+    mat = batchedbandedmatrix!(data, kl)
+
+    return batchedbandedmatrix!(matvec!, mat, y, x, nthreads)
+end
+
+"""
+    batchedbandedmatrix!(matvec!, A::BatchedBandedMatrix, y, x[, nthreads=1024])
+
+Update the banded matrix `A` using the `matvec!` function. See also
+[`batchedbandedmatrix`](@ref)
+"""
+function batchedbandedmatrix!(
+        matvec!::Function,
+        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T},
+        y::A, x::A,
+        nthreads = 1024
+    ) where {Nqh, n, ku, kl, Neh, T, A<:AbstractArray{T, 3}}
+
+    @assert (Nqh, n, Neh) == size(y)
+    @assert (Nqh, n, Neh) == size(x)
+    @assert nthreads >= Nqh
+
+    width = ku + kl + 1
+    Nqv = min(width, div(nthreads, Nqh))
+    Nev = cld(n, width)
+
+    event = Event(device(A))
+    setvec! = banded_setvector_kernel!(device(A), (Nqh, Nqv))
+    setmat! = banded_setmatrix_kernel!(device(A), (Nqh, Nqv))
+    # we can set every `width` columns in parallel, so we only need to do
+    # `width` launches to set the entire matrix as we stride over `width`
+    # columns with every work group
+    for v = 1:width
+        # set ones and zeros
+        event = setvec!(y, x, v, Val(width), Val(Nqv), Val(n);
+                        ndrange = (Nqh * Neh, Nqv * Nev),
+                        dependencies = (event,))
+
+        # multiply by these rows of the identity
+        event = matvec!(y, x, event)
+
+        # set the matrix values
+        event = setmat!(mat, y, v, Val(Nqv);
+                        ndrange = (Nqh * Neh, Nqv * Nev),
+                        dependencies = (event,))
+        wait(event)
+    end
+    return mat
 end
