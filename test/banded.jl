@@ -72,12 +72,18 @@
 
         # make sure this all works with fieldarray types too
         fld_b = fieldarray(undef, SVector{Nfields, T}, AT, (Nq..., Nev * Neh))
-        parent(components(fld_b)[1])[:] .= d_b[:]
+        # Since get_batched_array is a ReshapedArray, the copy! functions don't
+        # work on the GPU, but the parent is a PermutedDimsArray array which
+        # works fine...
+        copyto!(parent(Bennu.get_batched_array(fld_b, Nqh, Neh)), 1, d_b, 1)
         fld_x = fieldarray(undef, SVector{Nfields, T}, AT, (Nq..., Nev * Neh))
         ldiv!(fld_x, d_LU, fld_b)
 
-        @test Array(parent(components(fld_x)[1])) ≈
-           reshape(h_x, Nq..., Nfields, Nev * Neh)
+        # Since get_batched_array is a ReshapedArray, the copy! functions don't
+        # work on the GPU, but the parent is a PermutedDimsArray array which
+        # works fine...
+        fld_xa = copyto!(Array{T}(undef, Nqh, n, Neh), 1, parent(Bennu.get_batched_array(fld_x, Nqh, Neh)), 1)
+        @test fld_xa ≈ reshape(h_x, Nqh, n, Neh)
 
         # Check the that the banded matvec works
         # NOTE: This NOT high-performance code!
@@ -176,12 +182,16 @@
             matvec(dq, q, Event(Bennu.device(q)))
 
             # To use the banded-matrix we need to reshape the data arrays
-            n = Nqv * Nev * Nfields
-            q_array = reshape(parent(components(q)[1]), Nqh, n, Neh)
-            dq_array = similar(q_array)
-            mul!(dq_array, mat, q_array)
+            q_a = Bennu.get_batched_array(q, Nqh, Neh)
+            dq_a = similar(q_a)
+            mul!(dq_a, mat, q_a)
 
-            @test Array(dq_array) ≈ Array(reshape(parent(components(dq)[1]), Nqh, n, Neh))
+            # Since get_batched_array is a ReshapedArray, the copy! functions
+            # don't work on the GPU, but the parent is a PermutedDimsArray array
+            # which works fine...
+            dq_fa = copyto!(Array{T}(undef, Nqh, Nfields * Nqv * Nev, Neh), 1,
+                            parent(Bennu.get_batched_array(dq, Nqh, Neh)), 1)
+            @test Array(dq_a) ≈ dq_fa
         end
     end
 end
