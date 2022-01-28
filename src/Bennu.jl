@@ -7,7 +7,6 @@ using CUDAKernels
 using FillArrays
 using GPUArrays
 using KernelAbstractions
-using LazyArrays
 using LinearAlgebra
 using LoopVectorization
 using SparseArrays
