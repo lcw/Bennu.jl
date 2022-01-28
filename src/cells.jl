@@ -64,7 +64,7 @@ function LobattoCell{T, A}(dims...) where {T, A}
 
     derivatives = ntuple(N) do i
         tup = ntuple(j->ifelse(i==j, o[i].derivative, Eye{T}(dims[j])), N)
-        return Kron(reverse(tup)...)
+        return Kron(reverse(tup))
     end
 
     mass = Diagonal(vec(.*(weights_1d...)))
@@ -81,7 +81,7 @@ function LobattoCell{T, A}(dims...) where {T, A}
                     repeat(vec(ω1 .* ω2), 2)))
     end
 
-    toequallyspaced = Kron(reverse(ntuple(i->o[i].toequallyspaced, N))...)
+    toequallyspaced = Kron(reverse(ntuple(i->o[i].toequallyspaced, N)))
 
     connectivity = adapt(A, materializeconnectivity(LobattoCell, dims...))
 
