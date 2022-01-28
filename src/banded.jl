@@ -490,3 +490,46 @@ function batchedbandedmatrix!(
     end
     return mat
 end
+
+function batchedbandedmatrix(
+        rhs!::Function,
+        grid::AbstractGrid,
+        y::StructArray,
+        x::StructArray,
+        eb,
+        nthreads = 1024
+    ) where {T, S}
+
+    @assert eltype(x) == eltype(y)
+    @assert size(x) == size(y)
+    @assert isstacked(grid)
+
+    Nfields = _numfields(eltype(y))
+
+    Nqv = size(celltype(grid))[end]
+    Nqh = div(length(celltype(grid)), Nqv)
+    Nev = stacksize(grid)
+    Neh = horizontalsize(grid)
+
+    # Matrix size
+    n = Nqv * Nev * Nfields
+
+    @assert length(x) == (Nqv * Nqh * Nev * Neh)
+
+    x_array = reshape(parent(components(x)[1]), Nqh, n, Neh)
+    y_array = reshape(parent(components(y)[1]), Nqh, n, Neh)
+
+    # Make sure this is really a fieldarray!
+    @assert all(map(y -> pointer(y) === pointer(x_array),
+                    parent.(components(x))))
+    @assert all(map(y -> pointer(y) === pointer(y_array),
+                    parent.(components(y))))
+
+    matvec!(_, _, event) = rhs!(y, x, event)
+
+    # Due to fields being second, we have to expand the bandwidth by one whole
+    # element!
+    kl = ku = Nqv * Nfields * (eb + 1)
+
+    return batchedbandedmatrix(matvec!, y_array, x_array, kl, ku, nthreads)
+end

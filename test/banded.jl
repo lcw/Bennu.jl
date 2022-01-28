@@ -97,4 +97,91 @@
         Bennu.batchedbandedmatrix!(rhs!, B, d_y, d_x)
         @test all(parent(A) ≈ parent(B))
     end
+
+    for (T, AT) in TAs
+        cellsandcoordinates =
+        (
+         (LobattoCell{T, AT}(5), (zero(T):1//4:one(T),)),
+         (LobattoCell{T, AT}(3, 5),
+          (-one(T):1//2:one(T), zero(T):1//4:one(T))),
+         (LobattoCell{T, AT}(3, 5, 2),
+          (-one(T):1//2:one(T), zero(T):1//4:one(T), zero(T):1//8:one(T),))
+        )
+
+        for (cell, coord) in cellsandcoordinates
+            rng = MersenneTwister(777)
+
+            Nq = size(cell)
+
+            # Setup the grid
+            grid = brickgrid(cell, coord,
+                             ordering = StackedOrdering{CartesianOrdering}())
+
+            # Get a derivative matrix
+            # Total hack to make the GPU happy!
+            D = AT(Array(derivatives(LobattoCell{T, Array}(Nq...))[end]))
+
+            # Set up the field storage
+            q = fieldarray(undef, SVector{Nfields, T}, grid)
+            dq = fieldarray(undef, SVector{Nfields, T}, grid)
+            A = fieldarray(undef, SMatrix{Nfields, Nfields, T}, grid)
+
+            # Some random coefficients to keep things interesting!
+            Np = prod(Nq)
+            Ne = length(grid)
+            Nev = Bennu.stacksize(grid)
+            Neh = Bennu.horizontalsize(grid)
+            Nqv = Nq[end]
+            Nqh = div(prod(Nq), Nqv)
+            parent(components(A)[1]) .= adapt(AT, rand(rng, T, Np, Nfields^2, Ne))
+
+            # extract the data for just the top and bottom faces
+            Nfp = div.(Np, Nq)
+            frange = ndims(cell) > 1 ? (2sum(Nfp[1:end-1])+1:2sum(Nfp)) : (1:2sum(Nfp))
+            faceixm, faceixp = faceindices(grid)
+            fdata = (faceixm[frange, :], faceixp[frange, :]);
+
+            # Define a RHS with a DG-like connectivity
+            @kernel function face_kernel!(dq, q, findm, findp, A)
+                I = @index(Global, Linear)
+                if I ≤ length(findm)
+                    fm = findm[I]
+                    fp = findp[I]
+                    dq[fm] += (A[fm] * q[fm] + A[fp] * q[fp])
+                end
+            end
+
+            function matvec(dq, q, event)
+                wait(event)
+
+                # volume term
+                @tullio dq[i, e] += D[i, j] * (A[j, e] * q[j, e])
+                event = Event(Bennu.device(q))
+                knl = face_kernel!(Bennu.device(A), 256)
+                event = knl(dq, q, fdata..., A; ndrange = length(fdata[1]),
+                            dependencies = (event,))
+
+                return event
+            end
+
+            # Create the banded matrix from the matvec function
+            eb = 1
+            mat = Bennu.batchedbandedmatrix(matvec, grid, dq, q, eb)
+
+            # Fill q with some random data and then compute the matvec using the
+            # matvec function and then the banded matrix
+            parent(components(q)[1]) .= AT(rand(rng, prod(Nq), Nfields, length(grid)))
+
+            fill!(parent(components(dq)[1]), 0)
+            matvec(dq, q, Event(Bennu.device(q)))
+
+            # To use the banded-matrix we need to reshape the data arrays
+            n = Nqv * Nev * Nfields
+            q_array = reshape(parent(components(q)[1]), Nqh, n, Neh)
+            dq_array = similar(q_array)
+            mul!(dq_array, mat, q_array)
+
+            @test Array(dq_array) ≈ Array(reshape(parent(components(dq)[1]), Nqh, n, Neh))
+        end
+    end
 end
