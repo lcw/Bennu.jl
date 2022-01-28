@@ -49,6 +49,30 @@ function Adapt.adapt_structure(to,
 end
 
 """
+    get_batched_array(x::StructArray, Nqh, Neh)
+
+Get the array that backs fieldarray `x` with horiztonal workgroup size `Nqh` and
+horizonal number workgroups `Neh` in the format used by the batched routines.
+
+The main functionality of this routine is to permuate the vertical dof and field
+dimensions for more efficient banded solvers.
+"""
+function get_batched_array(x::StructArray, Nqh, Neh)
+    Nfields = length(eltype(x))
+    Nev = div(size(x)[end], Neh)
+    Nqv = div(prod(size(x)[1:end-1]), Nqh)
+    n = Nev * Nqv * Nfields
+    xa = parent(components(x)[1])
+    @assert all(map(y -> pointer(y) === pointer(xa), parent.(components(x))))
+
+    # Reshape so that fields come before vertical dofs (smaller bandwidth)
+    xa = PermutedDimsArray(reshape(xa, Nqh, Nqv, Nfields, Nev, Neh),
+                                (1, 3, 2, 4, 5))
+
+    return reshape(xa, Nqh, n, Neh)
+end
+
+"""
     batchedbandedlu!(A::AbstractArray{T, 4} [, kl = div(size(mat, 2) - 1, 2)])
 
 Compute the banded LU factors of the batched matrix `A`. Uses the `A` as storage
@@ -282,14 +306,8 @@ function LinearAlgebra.ldiv!(
         b::StructArray
     ) where {Nqh, n, ku, kl, Neh, T, A}
 
-    x_array = reshape(parent(components(x)[1]), Nqh, n, Neh)
-    b_array = reshape(parent(components(b)[1]), Nqh, n, Neh)
-
-    # Make sure this is really a fieldarray!
-    @assert all(map(y -> pointer(y) === pointer(x_array),
-                    parent.(components(x))))
-    @assert all(map(y -> pointer(y) === pointer(b_array),
-                    parent.(components(b))))
+    x_array = get_batched_array(x, Nqh, Neh)
+    b_array = get_batched_array(b, Nqh, Neh)
 
     ldiv!(x_array, fac, b_array)
 end
@@ -454,10 +472,10 @@ Update the banded matrix `A` using the `matvec!` function. See also
 """
 function batchedbandedmatrix!(
         matvec!::Function,
-        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T},
+        mat::BatchedBandedMatrix{Nqh, n, ku, kl, Neh, T, AT},
         y::A, x::A,
         nthreads = 1024
-    ) where {Nqh, n, ku, kl, Neh, T, A<:AbstractArray{T, 3}}
+    ) where {Nqh, n, ku, kl, Neh, T, A<:AbstractArray{T, 3}, AT}
 
     @assert (Nqh, n, Neh) == size(y)
     @assert (Nqh, n, Neh) == size(x)
@@ -467,9 +485,9 @@ function batchedbandedmatrix!(
     Nqv = min(width, div(nthreads, Nqh))
     Nev = cld(n, width)
 
-    event = Event(device(A))
-    setvec! = banded_setvector_kernel!(device(A), (Nqh, Nqv))
-    setmat! = banded_setmatrix_kernel!(device(A), (Nqh, Nqv))
+    event = Event(device(AT))
+    setvec! = banded_setvector_kernel!(device(AT), (Nqh, Nqv))
+    setmat! = banded_setmatrix_kernel!(device(AT), (Nqh, Nqv))
     # we can set every `width` columns in parallel, so we only need to do
     # `width` launches to set the entire matrix as we stride over `width`
     # columns with every work group
@@ -516,20 +534,14 @@ function batchedbandedmatrix(
 
     @assert length(x) == (Nqv * Nqh * Nev * Neh)
 
-    x_array = reshape(parent(components(x)[1]), Nqh, n, Neh)
-    y_array = reshape(parent(components(y)[1]), Nqh, n, Neh)
-
-    # Make sure this is really a fieldarray!
-    @assert all(map(y -> pointer(y) === pointer(x_array),
-                    parent.(components(x))))
-    @assert all(map(y -> pointer(y) === pointer(y_array),
-                    parent.(components(y))))
+    x_array = get_batched_array(x, Nqh, Neh)
+    y_array = get_batched_array(y, Nqh, Neh)
 
     matvec!(_, _, event) = rhs!(y, x, event)
 
     # Due to fields being second, we have to expand the bandwidth by one whole
     # element!
-    kl = ku = Nqv * Nfields * (eb + 1)
+    kl = ku = Nqv * Nfields * eb
 
     return batchedbandedmatrix(matvec!, y_array, x_array, kl, ku, nthreads)
 end
