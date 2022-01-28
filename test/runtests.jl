@@ -10,7 +10,6 @@ using EzXML: EzXML
 using FastGaussQuadrature: FastGaussQuadrature
 using FillArrays
 using KernelAbstractions
-using LazyArrays
 using LinearAlgebra
 using Random
 using SparseArrays

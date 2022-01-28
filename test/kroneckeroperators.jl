@@ -19,20 +19,20 @@
                      (a, Eye{T}(4), Eye{T}(7)),
                      (a, b, c))
 
-            K = adapt(A, collect(Kron(adapt(Array, args)...)))
+            K = adapt(A, collect(Bennu.Kron(adapt(Array, args))))
             d = adapt(A, rand(SVector{2, T}, size(K, 2), 6))
             e = adapt(A, rand(SVector{2, T}, size(K, 2)))
-            @test Array(Kron(args...) * e) ≈ Array(K * e)
-            @test Array(Kron(args...) * d) ≈ Array(K * d)
+            @test Array(Bennu.Kron(args) * e) ≈ Array(K * e)
+            @test Array(Bennu.Kron(args) * d) ≈ Array(K * d)
 
             if isbits(T)
                 f = rand(rng, T, size(K, 2), 3, 2)
                 f = adapt(A, reinterpret(reshape, SVector{2, T},
                                          PermutedDimsArray(f, (3, 1, 2))))
-                @test Array(Kron(args...) * f) ≈ Array(K * f)
+                @test Array(Bennu.Kron(args) * f) ≈ Array(K * f)
             end
 
-            @test adapt(Array, Kron(args...)) == Kron(adapt.(Array, args)...)
+            @test adapt(Array, Bennu.Kron(args)) == Bennu.Kron(adapt.(Array, args))
         end
     end
 end
