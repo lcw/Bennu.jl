@@ -418,7 +418,8 @@ end
     v = w + (ev-1) * (kl + ku + 1)
 
     A = view(A_, ij, :, :, eh)
-    x = view(x_, ij, :, eh)
+    # Using a view for x cause too much register pressure
+    # x = view(x_, ij, :, eh)
     # if v is a valid column
     @inbounds if v ≤ n
         # Loop over the band and set the matrix values
@@ -427,7 +428,8 @@ end
             u = v + p
             # If inside the matrix copy from x otherwise set 0
             if 1 ≤ u ≤ n && p ≤ kl
-                A[u, v] = x[u]
+               # A[u, v] = x[u]
+                A[u, v] = x_[ij, u, eh]
             elseif p ≤ kl
                 A[u, v] = 0
             end
