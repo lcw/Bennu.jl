@@ -1,5 +1,4 @@
 #!/bin/bash
-#SBATCH --time=01:00:00
 #========================================
 echo "# "
 echo "# Running job $SLURM_JOB_NAME - $SLURM_JOB_ID "
