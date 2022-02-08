@@ -139,8 +139,8 @@ function batchedbandedlu!(
 end
 
 @kernel function bandedlu_kernel!(
-        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh}
-    ) where{Nqh, n, ku, kl, Neh}
+        fac::BatchedBandedLU{Nqh, n, ku, kl, Neh, T}
+    ) where{Nqh, n, ku, kl, Neh, T}
 
     @uniform begin
         # center index of band
@@ -156,6 +156,9 @@ end
     # Create an object that indexes like a matrix for this thread
     U = L = view(fac, ij, :, :, eh)
 
+    # private memory for the bit of L that we update
+    p_L = @private T (kl,)
+
     # matrix index: (u,v) -> banded index: (c + u - v, u)
     # v is column index
     @inbounds for v = 1:n
@@ -164,7 +167,7 @@ end
 
         # Fill L
         @unroll for p = 1:kl
-            L[v + p, v] *= invUvv
+            p_L[p] = L[v + p, v] *= invUvv
         end
 
         # Update U
@@ -178,7 +181,7 @@ end
                 @unroll for p = 1:kl
                     # U[v + p, u] -= L[v + p, v] * U[v, u]
                     # U[c + p - q, u] -= L[c + p, v] * Uvu
-                    U[v + p, u] -= L[v + p, v] * Uvu
+                    U[v + p, u] -= p_L[p] * Uvu
                 end
             end
         end
