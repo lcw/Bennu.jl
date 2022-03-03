@@ -92,3 +92,18 @@ function fieldarray(S::NamedTuple, data::Tuple)
 
     return StructArray(NamedTuple{keys(S)}(fields))
 end
+
+function fieldarray(a::AbstractArray, dims::Dims=size(a))
+    similar(a, dims)
+end
+
+_namedtuple(::Type{S}) where {S} = S
+function _namedtuple(::Type{S}) where {S <: NamedTuple}
+    k = S.parameters[1]
+    v = S.parameters[2].parameters
+    return NamedTuple{k}(_namedtuple.(v))
+end
+function fieldarray(a::StructArray{S}, dims::Dims=size(a)) where {S}
+    @assert isfieldarray(a)
+    fieldarray(undef, _namedtuple(S), arraytype(a), dims)
+end
