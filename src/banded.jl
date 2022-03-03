@@ -63,7 +63,7 @@ function get_batched_array(x::StructArray, Nqh, Neh)
     Nqv = div(prod(size(x)[1:end-1]), Nqh)
     n = Nev * Nqv * Nfields
     xa = parent(components(x)[1])
-    @assert all(map(y -> pointer(y) === pointer(xa), parent.(components(x))))
+    @assert isfieldarray(x)
 
     # Reshape so that fields come before vertical dofs (smaller bandwidth)
     xa = PermutedDimsArray(reshape(xa, Nqh, Nqv, Nfields, Nev, Neh),

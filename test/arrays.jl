@@ -13,6 +13,7 @@
         a = fieldarray(undef, T, A, ())
         @test size(a) == ()
         @test typeof(a) == typeof(fieldarray(a))
+        @test Bennu.isfieldarray(a)
 
         b = fieldarray(a, (1,2,1,3))
         @test size(b) == (1,2,1,3)
@@ -23,6 +24,7 @@
         @test eltype(a) == T
         @test Tullio.storage_type(a) <: A
         @test typeof(a) == typeof(fieldarray(a))
+        @test Bennu.isfieldarray(a)
 
         b = fieldarray(a, (1,2,1,3))
         @test size(b) == (1,2,1,3)
@@ -35,6 +37,7 @@
         @test eltype(a) == T
         @test Tullio.storage_type(a) <: A
         @test typeof(a) == typeof(fieldarray(a))
+        @test Bennu.isfieldarray(a)
 
         b = fieldarray(a, (1,2,1,3))
         @test size(b) == (1,2,1,3)
@@ -47,6 +50,8 @@
         @test eltype(a) == NamedTuple{(:a, :b), Tuple{SVector{2, T}, T}}
         @test Tullio.storage_type(a) <: A
         @test typeof(a) == typeof(fieldarray(a))
+        @test Bennu.isfieldarray(a)
+        @test !Bennu.isfieldarray(similar(a))
 
         b = fieldarray(a, (1,2,1,3))
         @test size(b) == (1,2,1,3)
