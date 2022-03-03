@@ -107,3 +107,17 @@ function fieldarray(a::StructArray{S}, dims::Dims=size(a)) where {S}
     @assert isfieldarray(a)
     fieldarray(undef, _namedtuple(S), arraytype(a), dims)
 end
+
+isfieldarray(a) = Tullio.storage_type(a) == typeof(a)
+function isfieldarray(a::StructArray)
+    data = components(a)[1]
+    while data isa StructArray
+        data = components(data)[1]
+    end
+    isfieldarray(a, data)
+end
+isfieldarray(a::StructArray, data) =
+    all(isfieldarray.(values(components(a)), Ref(data)))
+isfieldarray(a::Union{Base.ReshapedArray, SubArray}, data) =
+    isfieldarray(parent(a), data)
+isfieldarray(a, data) = pointer(a) == pointer(data)
