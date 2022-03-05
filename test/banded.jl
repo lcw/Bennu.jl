@@ -123,14 +123,15 @@
             grid = brickgrid(cell, coord,
                              ordering = StackedOrdering{CartesianOrdering}())
 
-            # Get a derivative matrix
-            # Total hack to make the GPU happy!
-            D = AT(Array(derivatives(LobattoCell{T, Array}(Nq...))[end]))
-
             # Set up the field storage
             q = fieldarray(undef, SVector{Nfields, T}, grid)
             dq = fieldarray(undef, SVector{Nfields, T}, grid)
             A = fieldarray(undef, SMatrix{Nfields, Nfields, T}, grid)
+
+            # Get a derivative matrix
+            # Total hack to make the GPU happy!
+            D = derivatives(LobattoCell{T, Array}(Nq...))[end]
+            D = AT(length(Nq) == 1 ? components(D)[1] : kron(components(D)...))
 
             # Some random coefficients to keep things interesting!
             Np = prod(Nq)
