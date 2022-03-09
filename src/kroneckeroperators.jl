@@ -20,7 +20,7 @@ function (*)(K::Kron{Tuple{D}}, f::F) where {D <: AbstractMatrix,
     g = reshape(f, size(d, 2), :)
     r = similar(f, size(d, 1), size(g, 2))
 
-    @tullio r[i, e] = d[i, l] * g[l, e]
+    @tullio avx=false r[i, e] = d[i, l] * g[l, e]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -32,7 +32,7 @@ function (*)(K::Kron{Tuple{E, D}}, f::F) where
     g = reshape(f, size(d, 2), size(e, 1), :)
     r = similar(f, size(d, 1), size(e, 1), size(g, 3))
 
-    @tullio r[i, j, k] = d[i, l] * g[l, j, k]
+    @tullio avx=false  r[i, j, k] = d[i, l] * g[l, j, k]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -44,7 +44,7 @@ function (*)(K::Kron{Tuple{D, E}}, f::F) where
     g = reshape(f, size(e, 1), size(d, 2),  :)
     r = similar(f, size(e, 1), size(d, 1), size(g, 3))
 
-    @tullio r[i, j, k] = d[j, l] * g[i, l, k]
+    @tullio avx=false  r[i, j, k] = d[j, l] * g[i, l, k]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -56,7 +56,7 @@ function (*)(K::Kron{Tuple{B, A}}, f::F) where
     g = reshape(f, size(a, 2), size(b, 2),  :)
     r = similar(f, size(a, 1), size(b, 1), size(g, 3))
 
-    @tullio r[i, j, k] = b[j, m] * a[i, l] * g[l, m, k]
+    @tullio avx=false  r[i, j, k] = b[j, m] * a[i, l] * g[l, m, k]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -68,7 +68,7 @@ function (*)(K::Kron{Tuple{E₃, E₂, D}}, f::F) where
     g = reshape(f, size(d, 2), size(e₂, 1), size(e₃, 1),  :)
     r = similar(f, size(d, 1), size(e₂, 1), size(e₃, 1), size(g, 4))
 
-    @tullio r[i, j, k, e] = d[i, l] * g[l, j, k, e]
+    @tullio avx=false  r[i, j, k, e] = d[i, l] * g[l, j, k, e]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -80,7 +80,7 @@ function (*)(K::Kron{Tuple{E₃, D, E₁}}, f::F) where
     g = reshape(f, size(e₁, 1), size(d, 2), size(e₃, 1),  :)
     r = similar(f, size(e₁, 1), size(d, 1), size(e₃, 1), size(g, 4))
 
-    @tullio r[i, j, k, e] = d[j, l] * g[i, l, k, e]
+    @tullio avx=false  r[i, j, k, e] = d[j, l] * g[i, l, k, e]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -92,7 +92,7 @@ function (*)(K::Kron{Tuple{D, E₂, E₁}}, f::F) where
     g = reshape(f, size(e₁, 1), size(e₂, 1), size(d, 2),  :)
     r = similar(f, size(e₁, 1), size(e₂, 1), size(d, 1), size(g, 4))
 
-    @tullio r[i, j, k, e] = d[k, l] * g[i, j, l, e]
+    @tullio avx=false  r[i, j, k, e] = d[k, l] * g[i, j, l, e]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end
@@ -105,7 +105,7 @@ function (*)(K::Kron{Tuple{C, B, A}}, f::F) where
     g = reshape(f, size(a, 2), size(b, 2), size(c, 2),  :)
     r = similar(f, size(a, 1), size(b, 1), size(c, 1), size(g, 4))
 
-    @tullio r[i, j, k, e] = c[k, n] * b[j, m] * a[i, l] * g[l, m, n, e]
+    @tullio avx=false  r[i, j, k, e] = c[k, n] * b[j, m] * a[i, l] * g[l, m, n, e]
 
     return F <: AbstractVector ? vec(r) : reshape(r, size(K, 1), size(f, 2))
 end

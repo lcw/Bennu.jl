@@ -25,6 +25,12 @@
             @test Array(Bennu.Kron(args) * e) ≈ Array(K * e)
             @test Array(Bennu.Kron(args) * d) ≈ Array(K * d)
 
+            g = adapt(A, rand(T, 4, size(K, 2), 6))
+            gv1 = @view g[1, :, :]
+            gv2 = @view g[1, :, 1]
+            @test Array(Bennu.Kron(args) * gv1) ≈ Array(K * gv1)
+            @test Array(Bennu.Kron(args) * gv2) ≈ Array(K * gv2)
+
             if isbits(T)
                 f = rand(rng, T, size(K, 2), 3, 2)
                 f = adapt(A, reinterpret(reshape, SVector{2, T},
