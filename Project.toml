@@ -1,7 +1,7 @@
 name = "Bennu"
 uuid = "a1f7094c-8d14-434f-a772-7144e1a1c6c0"
 authors = ["Lucas C Wilcox <lucas@swirlee.com> and contributors"]
-version = "0.2.1"
+version = "0.3.0"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
