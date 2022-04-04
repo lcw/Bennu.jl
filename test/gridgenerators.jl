@@ -239,4 +239,18 @@ end
             end
         end
     end
+
+    for p in (
+            SVector(+0.4, -1.00, +0.3),
+            SVector(+0.5, +1.00, -0.2),
+            SVector(-0.5, +1.00, +0.2),
+            SVector(+1.0, -0.70, -0.2),
+            SVector(-1.0, -0.70, +0.2),
+            SVector(+0.3, -0.75, -1.0),
+            SVector(-0.3, -0.75, +1.0),
+        )
+        r = Bennu.cubesphereunwarp(p)
+        p̂ = Bennu.cubespherewarp(r)
+        @test p ≈ p̂
+    end
 end

@@ -278,6 +278,26 @@ function cubespherewarp(point)
     return point
 end
 
+function cubesphereunwarp(point)
+    # Put the points in reverse magnitude order
+    p = sortperm(abs.(point))
+    point = point[p]
+
+    # Convert to angles
+    ξ = 4atan(point[2]/point[3])/π
+    η = 4atan(point[1]/point[3])/π
+    R = sign(point[3])*hypot(point...)
+
+    x = R
+    y = R * ξ
+    z = R * η
+
+    # Compute the new points and unpermute
+    point = SVector(z, y, x)[sortperm(p)]
+
+    return point
+end
+
 function cubedshellconnectivity(referencecell::LobattoCell,
                                 R::Real,
                                 ncells::Integer;
