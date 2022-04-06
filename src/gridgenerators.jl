@@ -439,3 +439,64 @@ function cubedspheregrid(referencecell::LobattoCell,
 
     return NodalGrid(cubespherewarp, referencecell, vertices, connectivity, :cubedsphere; stacksize=stacksize)
 end
+
+function cubedspherereference(x, vert_coord, ncells_h_panel)
+    # Find the radial index 
+    ρ = norm(x)
+    k = clamp(sum(ρ .> vert_coord), 1, length(vert_coord) - 1)
+    ẑ = (2ρ - vert_coord[k] - vert_coord[k+1]) / (vert_coord[k+1] - vert_coord[k])
+
+    # Find the indices on the faces
+    T = eltype(x)
+    r = range(T(-1), length=(ncells_h_panel+1), stop=T(1))
+    s = range(T(1), length=(ncells_h_panel+1), stop=T(-1))
+
+    hinv =  ncells_h_panel / T(2)
+    ξ = Bennu.cubesphereunwarp(x) / ρ
+
+    # Find which face the point is on
+    fdim = argmax(abs.(ξ))
+    nsb = !signbit(ξ[fdim])
+    f = 2 * fdim - 1 + nsb
+
+    sn = sign(ξ[fdim])
+    if fdim == 1
+        i = clamp(ceil(Int, (sn*ξ[2]+1)*hinv), 1, ncells_h_panel)
+        j = clamp(ceil(Int, (ξ[3]+1)*hinv), 1, ncells_h_panel)
+
+        ax = nsb ? r[i] : s[i]
+        bx = nsb ? r[i+1] : s[i+1]
+        x̂ = (2ξ[2] - ax - bx) / (bx - ax)
+
+        ay = r[j]
+        by = r[j+1]
+        ŷ = (2ξ[3] - ay - by) / (by - ay)
+    elseif fdim == 2
+        i = clamp(ceil(Int, (-sn*ξ[1]+1)*hinv), 1, ncells_h_panel)
+        j = clamp(ceil(Int, (ξ[3]+1)*hinv), 1, ncells_h_panel)
+
+        ax = nsb ? s[i] : r[i]
+        bx = nsb ? s[i+1] : r[i+1]
+        x̂ = (2ξ[1] - ax - bx) / (bx - ax)
+
+        ay = r[j]
+        by = r[j+1]
+        ŷ = (2ξ[3] - ay - by) / (by - ay)
+    elseif fdim == 3
+        i = clamp(ceil(Int, (ξ[1]+1)*hinv), 1, ncells_h_panel)
+        j = clamp(ceil(Int, (sn*ξ[2]+1)*hinv), 1, ncells_h_panel)
+
+        ax = r[i]
+        bx = r[i+1]
+        x̂ = (2ξ[1] - ax - bx) / (bx - ax)
+
+        ay = nsb ? r[j] : s[j]
+        by = nsb ? r[j+1] : s[j+1]
+        ŷ = (2ξ[2] - ay - by) / (by - ay)
+    end
+
+    cellcoordinate = (x̂, ŷ, ẑ)
+    cellindex = (k, i, j, f)
+
+    return (cellcoordinate, cellindex)
+end
