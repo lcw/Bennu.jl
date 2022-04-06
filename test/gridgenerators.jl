@@ -253,4 +253,25 @@ end
         p̂ = Bennu.cubespherewarp(r)
         @test p ≈ p̂
     end
+
+    let
+        FT = Float64
+        A = Array
+
+        cell = LobattoCell{FT,A}(3, 3, 4)
+        vert_coord = [one(FT), 2one(FT), 4one(FT), (11//2)*one(FT)]
+        ncells_h_panel = 3
+
+        grid = cubedspheregrid(cell, vert_coord, ncells_h_panel)
+
+        x = points(grid)
+        ξ  = Bennu.cubesphereunwarp.(x)
+        ps = reshape(points(grid), length(cell), size(grid)...)
+
+        for p in ps
+            (x̂, cell_coords) = Bennu.cubedspherereference(p, vert_coord, ncells_h_panel)
+            V = kron(reverse(spectralinterpolation.(cell.points_1d, x̂))...)
+            @test first(V * ps[:, cell_coords...]) ≈ p
+        end
+    end
 end
