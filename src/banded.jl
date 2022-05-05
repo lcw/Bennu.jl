@@ -153,21 +153,15 @@ end
     # horizontal degree of freedom
     ij = @index(Local, Linear)
 
-    # Create an object that indexes like a matrix for this thread
-    U = L = view(fac, ij, :, :, eh)
-
-    # private memory for the bit of L that we update
-    p_L = @private T (kl,)
-
     # matrix index: (u,v) -> banded index: (c + u - v, u)
     # v is column index
     @inbounds for v = 1:n
         # Get the pivot
-        invUvv = 1/U[v, v]
+        invUvv = 1/fac.data[ij, ku + 1, v, eh]
 
         # Fill L
-        @unroll for p = 1:kl
-            p_L[p] = L[v + p, v] *= invUvv
+        for p = 1:kl
+            fac.data[ij, ku + 1 + p, v, eh] *= invUvv
         end
 
         # Update U
@@ -177,11 +171,12 @@ end
             # If this row is part of the matrix update it
             if u ≤ n
                 # Uvu = U[c - q, u]
-                Uvu = U[v, u]
-                @unroll for p = 1:kl
+                Uvu = fac.data[ij, ku + 1 - q, u, eh]
+                for p = 1:kl
                     # U[v + p, u] -= L[v + p, v] * U[v, u]
                     # U[c + p - q, u] -= L[c + p, v] * Uvu
-                    U[v + p, u] -= p_L[p] * Uvu
+                    fac.data[ij, ku + 1 + p - q, u, eh] -=
+                        fac.data[ij, ku + 1 + p, v, eh] * Uvu
                 end
             end
         end
@@ -203,34 +198,32 @@ end
     # horizontal degree of freedom
     ij = @index(Local, Linear)
 
-    # Create an object that indexes like a matrix for this thread
-    L = view(fac, ij, :, :, eh)
-    b = view(b_, ij, :, eh)
-    x = view(x_, ij, :, eh)
-
     # Fill the private storage of b
     @inbounds for v = 1:kl+1
-        p_b[v] = v ≤ n ? b[v] : -zero(T)
+        p_b[v] = v ≤ n ? b_[ij, v, eh] : -zero(T)
     end
 
     # Loop over the columns
     @inbounds for v = 1:n
+        # Loop over the rows
+        @unroll for p = 1:kl
+            # Update element
+            Luv = fac.data[ij, ku + 1 + p, v, eh]
+            p_b[p + 1] -= Luv * p_b[1]
+        end
+
         # Pull out the b associated with v
-        x[v] = bv = p_b[1]
+        x_[ij, v, eh] = p_b[1]
 
         # Loop over the rows
         @unroll for p = 1:kl
-            # compute row index from band index
-            u = v + p
-
-            # Update element and shift in the private array back one
-            Luv = L[u, v]
-            p_b[p] = p_b[p + 1] - Luv * bv
+            # shift the private array back one
+            p_b[p] = p_b[p + 1]
         end
 
         # If we have more elements, get the next value
         if v + kl < n
-            p_b[kl + 1] = b[v + kl + 1]
+            p_b[kl + 1] = b_[ij, v + kl + 1, eh]
         end
     end
 end
@@ -250,36 +243,36 @@ end
     # horizontal degree of freedom
     ij = @index(Local, Linear)
 
-    # Create an object that indexes like a matrix for this thread
-    U = view(fac, ij, :, :, eh)
-    b = view(b_, ij, :, eh)
-    x = view(x_, ij, :, eh)
-
     # Fill the private storage of b
     @inbounds for q = 1:ku + 1
         v = n + 1 - q
-        p_b[q] = v > 0 ? b[v] : -zero(T)
+        p_b[q] = v > 0 ? b_[ij, v, eh] : -zero(T)
     end
 
     # Loop over the columns
     @inbounds for v = n:-1:1
         # Scale and store the first element of b
-        Uvv = U[v, v]
-        x[v] = bv = p_b[1] / Uvv
+        Uvv = fac.data[ij, ku + 1, v, eh]
+        p_b[1] /= Uvv
 
         # Loop over the rows
         @unroll for q = 1:ku
-            # compute row index from band index
-            u = v - q
+            # Update element
+            Uuv = fac.data[ij, ku + 1 - q, v, eh]
+            p_b[q + 1] -= Uuv * p_b[1]
+        end
 
-            # Update element and shift in the private array back one
-            Uuv = U[u, v]
-            p_b[q] = p_b[q + 1] - Uuv * bv
+        x_[ij, v, eh] = p_b[1]
+
+        # Loop over the rows
+        @unroll for q = 1:ku
+            # shift the private array back one
+            p_b[q] = p_b[q + 1]
         end
 
         # If we have more elements, get the next value
         if v - ku > 1
-            p_b[ku + 1] = b[v - ku - 1]
+            p_b[ku + 1] = b_[ij, v - ku - 1, eh]
         end
     end
 end
