@@ -22,7 +22,7 @@ WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
 Adapt = "3"
-ArrayInterface = "3"
+ArrayInterface = "3, 5"
 CUDA = "3"
 CUDAKernels = "0.2, 0.3"
 ExprTools = "0.1"
